@@ -1,0 +1,107 @@
+---
+title: "The case for more GIS in front-line diplomacy"
+output: html_notebook
+---
+
+# First Section
+
+### READ ME {#h_header}
+Test scrolling => [test link](#h_index)
+This notebook outlines the process and code outputs associated with the project "" carried out for Spatial Data Science [Master's course](https://www.ucl.ac.uk/bartlett/casa/programmes/msc-spatial-data-science-and-visualisation){target="_blank"} at the [Barlett Centre for Advanced Spatial Analysis](https://www.ucl.ac.uk/bartlett/casa/) at **U**niversity **C**ollege **L**ondon.
+
+**This document aims to:**<br>
+- outline the process of data processing<br>
+- show outputs such as tables/maps<br>
+
+**This document does not intended to:**<br>
+- suppliment the final submission with additional analysis
+
+**Final submission** and analysis can be found [here]() `13.01.2020`<br>
+**Amended submission based on feedback** `not yet available`
+
+
+**This document aims to:**<br>
+- outline the process of data processing<br>
+- show outputs such as tables/maps<br>
+
+**This document does not intended to:**<br>
+- suppliment the final submission with additional analysis
+
+**Final submission** and analysis can be found [here]() `13.01.2020`<br>
+**Amended submission based on feedback** `not yet available`
+
+**This document aims to:**<br>
+- outline the process of data processing<br>
+- show outputs such as tables/maps<br>
+
+**This document does not intended to:**<br>
+- suppliment the final submission with additional analysis
+
+**Final submission** and analysis can be found [here]() `13.01.2020`<br>
+**Amended submission based on feedback** `not yet available`
+
+**This document aims to:**<br>
+- outline the process of data processing<br>
+- show outputs such as tables/maps<br>
+
+**This document does not intended to:**<br>
+- suppliment the final submission with additional analysis
+
+**Final submission** and analysis can be found [here]() `13.01.2020`<br>
+**Amended submission based on feedback** `not yet available`
+
+**This document aims to:**<br>
+- outline the process of data processing<br>
+- show outputs such as tables/maps<br>
+
+**This document does not intended to:**<br>
+- suppliment the final submission with additional analysis
+
+**Final submission** and analysis can be found [here]() `13.01.2020`<br>
+**Amended submission based on feedback** `not yet available`
+
+
+### INDEX{#h_index}
+<br>
+[check if can have links to scroll further down the document]
+<br>
+### PROCESS DIAGRAM
+
+[Step 1] => [Step 2] => [Step 3] from [draw.io](https://www.draw.io){target="_blank"}
+
+Test scrolling => [test link](#h_header)
+
+explicit: you give a custom name to a header ## Test {#test} and later refer to it with a link syntax: see [the relevant section](#test)
+
+
+
+## Second Section
+
+### Third Section
+
+
+<script type="text/javascript">
+  // When the document is fully rendered...
+  $(document).ready(function() {
+    // ...select all header elements...
+    $('h1, h2, h3, h4, h5').each(function() {
+      // ...and add an id to them corresponding to their 'titles'
+      $(this).attr('id', $(this).html());
+    });
+  });
+</script>
+
+
+<a href="#First Section">Go to first section</a><br>
+<a href="#Second Section">Go to second section</a><br>
+<a href="#Third Section">Go to third section</a>
+
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+
+        document.querySelector(this.getAttribute('href')).scrollIntoView({
+            behavior: 'smooth'
+        });
+    });
+});

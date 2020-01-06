@@ -1,0 +1,376 @@
+---
+title: "[TEMP NAME]:The case for more GIS in front-line diplomacy"
+output: html_notebook
+---
+### READ ME
+
+This notebook outlines the process and code outputs associated with the project "" carried out for Spatial Data Science [Master's course]() at the [Centre for Advanced Spatial Analytics]() at [University College London]().
+
+**This document aims to:**<br>
+- outline the process of data processing<br>
+- show outputs such as tables/maps<br>
+
+**This document does not intended to:**<br>
+- suppliment the final submission with additional analysis
+
+**Final submission** and analysis can be found [here]() `13.01.2020`<br>
+**Amended submission based on feedback** `not yet available`
+
+### INDEX
+<br>
+[check if can have links to scroll further down the document]
+<br>
+### PROCESS DIAGRAM
+
+[Step 1] => [Step 2] => [Step 3] from [draw.io](https://www.draw.io){target="_blank"}
+
+
+#### Step 1 install & import packages
+
+```{r}
+#Installation of packages
+#install.packages("countrycode")
+#install.packages("tibble")
+#install.packages("ggmap")
+#install.packages("tidyverse")
+#install.packages("sf")
+#install.packages("mapview")
+#install.packages("dplyr")
+```
+
+
+```{r}
+library(readr)
+library(countrycode)
+library(tibble)
+library(tidyverse)
+library(ggmap)
+
+library(sf)
+library(mapview)
+
+library(dplyr)
+```
+
+#### STEP 2 - geocode by city name
+
+**resources used**:<br> https://stackoverflow.com/questions/20937682/r-trying-to-find-latitude-longitude-data-for-cities-in-europe-and-getting-geocod
+
+```{r}
+getwd()
+```
+
+
+```{r}
+#geocode with R by city name
+
+lowy_raw_data <- read.csv("/cloud/project/Data/2019_LowyInstituteGlobalDiplomacyIndex_FullDataset.csv")
+
+i <- sapply(lowy_raw_data, is.factor)
+lowy_raw_data[i] <- lapply(lowy_raw_data[i], as.character)
+
+
+
+#list of all columns
+colnames(lowy_raw_data)
+```
+
+
+
+
+```{r}
+#8 city; 11 post type title; 10 type of post;
+
+#post city
+lapply(lowy_raw_data[8], unique)
+
+#post country
+lapply(lowy_raw_data[9], unique)
+
+#post type type
+lapply(lowy_raw_data[10], unique)
+
+#post type title
+lapply(lowy_raw_data[11], unique)
+
+#sending country
+lapply(lowy_raw_data[1], unique)
+```
+
+```{r}
+
+```
+
+Firstly to improve the database, a unique ID scheme is developed.
+To achieve this the below code will cycle through a unique list of country names (sending and post countries) and source the international standard ISO-3 letter code. Based on the `country code`package documented [here](https://www.rdocumentation.org/packages/countrycode/versions/1.1.0)
+
+#### ISO codes
+
+##### SET UP OBJECTS
+```{r}
+#iso encoded dataframe
+lowy_iso <- lowy_raw_data
+#country_iso list [column 1]
+country_iso_list <- c()
+#post_country_iso list [column 9]
+post_country_iso_list <- c()
+
+```
+
+##### RUN FOR LOOPS
+IMPROVEMENT - turn into a function
+followed material [here](https://github.com/vincentarelbundock/countrycode) github
+
+```{r}
+#Country column (1)
+for(country in lowy_raw_data[1]){
+  country_iso <- countrycode(
+    #call the entry of 'Country' for the row_number currently being taken by for loop
+    sourcevar = country, 
+    #three letter iso code
+    destination = "genc3c", 
+    #based on english language names
+    origin = "country.name")
+  
+  #add value to a list
+  country_iso_list <- append(country_iso_list,country_iso)
+}
+
+#Post country column (9)
+for(country in lowy_raw_data[9]){
+  post_country_iso <- countrycode(
+    #call the entry of 'Country' for the row_number currently being taken by for loop
+    sourcevar = country, 
+    #three letter iso code
+    destination = "genc3c", 
+    #based on english language names
+    origin = "country.name")
+  
+  #add value to a list
+  post_country_iso_list <- append(post_country_iso_list,post_country_iso)
+}
+
+```
+IMPROVEMENT - note unmatched place and propose solution
+
+```{r}
+#unique post city number
+#post city dataframe
+
+post_city_list <- lapply(lowy_raw_data[8], unique)
+
+"
+post_city <- data.frame(matrix(unlist(post_city_list),
+                               nrow = length(post_city_list)),
+                               stringsAsFactors = FALSE
+                               )
+"
+
+
+```
+
+
+
+
+#### Join lists to dataframe
+```{r}
+#add new columns
+#country column iso
+lowy_iso$COUNTRY_ISO = country_iso_list
+lowy_iso$POST_COUNTRY_ISO = post_country_iso_list
+```
+
+#### Unique ID column 
+```{r}
+#Unique ID column based on new columns
+lowy_iso$UNIQUE_ID = paste(
+  lowy_iso$COUNTRY_ISO,
+  lowy_iso$POST_COUNTRY_ISO,
+  sep="_")
+
+lowy_iso$POST_CITY_COUNTRY = paste(
+  lowy_iso$POST.CITY,
+  lowy_iso$POST.COUNTRY,
+  sep=", ")
+```
+
+```{r}
+
+lowy_iso
+```
+
+
+#### GEO TAG CITIES
+```{r}
+#create lists of distinct places to geocode
+
+register_google(key = "AIzaSyDNlUg_mclZ4kSJMDvbj_UVMHds8vkz2nE")
+
+#trial 1 - only city names
+geo_city <- distinct(lowy_iso,POST.CITY)
+geo_city_df <- as.data.frame(geo_city)
+
+#Uncomment only when to refresh data, else use saved .csv file
+#geo_city_df_dl <- mutate_geocode(geo_city_df, POST.CITY)
+
+#trial 2 - concatenated city and country names
+#geo_city_country <- distinct(lowy_iso,POST_CITY_COUNTRY)
+#geo_city_country_df <- as.data.frame(geo_city_country)
+```
+
+```{r}
+
+head(geo_city_df_dl)
+write.csv(geo_city_df_dl,"/cloud/project/Data/GoogleAPI/Geo_City_DL.csv", row.names = TRUE)
+```
+
+#### Map output
+
+```{r}
+geo_city_tibble <- as_tibble(geo_city_df_dl)
+
+#Projection based on EPSG 4326 which is in line with google
+geo_city_sf <- st_as_sf(geo_city_tibble,coords = c("lon","lat"), crs = 4326)
+
+#Open up map with all points (no extra info)
+mapview(geo_city_sf, legend = FALSE,cex = "number.of.types")
+
+
+```
+
+##### work with GGMAP
+
+```{r}
+#rename columns in dataframe
+colnames(lowy_iso)
+
+lowy_iso_rename <- lowy_iso
+
+lowy_iso_rename <- lowy_iso_rename %>% rename(
+  sending_country=SENDING_COUNTRY,
+  gdp_usd_billions = GDP_USD_BILLIONS,
+  population_millions = POPULATION..M.,
+  OECD_rank = OECD.RANK,
+  overall_rank = OVERALL.RANK,
+  post_country = POST.COUNTRY,
+  post_type = TYPE.OF.POST,
+  post_title = POST.TYPE.TITLE,
+  post_city = POST.CITY,
+  )
+
+lowy_iso_rename <- lowy_iso_rename %>% rename(
+  rank_G20 = G20.RANK,
+  rank_OECD = OECD_rank,
+  rank_Asia = ASIA.RANK,
+  post_country_iso = POST_COUNTRY_ISO,
+  sending_country_iso = COUNTRY_ISO,
+  ID = UNIQUE_ID,
+  post_city_country = POST_CITY_COUNTRY
+  )
+lowy_iso_rename <- lowy_iso_rename %>% rename(
+  rank_overall = overall_rank
+  )
+
+
+```
+
+
+```{r}
+#data frame with count of missions per city
+head(geo_city_tibble)
+colnames(lowy_iso_rename)
+
+lowy_iso_rearrange <- lowy_iso_rename
+ 
+# Reorder the columns of the dataframe
+ 
+lowy_iso_rearrange = select(lowy_iso_rearrange, 
+                            ID,
+                            #sending data
+                            sending_country_iso,
+                            sending_country,
+                            #posting data
+                            post_country_iso, 
+                            post_country,
+                            post_city,
+                            post_type,
+                            post_title,
+                            #send country metadata
+                            population_millions,
+                            gdp_usd_billions,
+                            rank_G20,
+                            rank_OECD,
+                            rank_Asia,
+                            #other columns
+                            everything())
+head(lowy_iso_rearrange)
+
+```
+
+join lat and long to re-arranged dataframe
+
+```{r}
+head(lowy_iso_rearrange,2)
+
+#summarise table to have post cities and count of embassies before joining
+
+lowy_mission_count <- lowy_iso_rearrange %>% 
+  group_by(post_city) %>% 
+  summarise(count = n()) %>% 
+  arrange(desc(count))
+
+lowy_mission_count
+
+lowy_mission_count_geo <- left_join(lowy_mission_count, geo_city_tibble, by = c("post_city" = "POST.CITY"))
+
+tail(lowy_mission_count_geo,15)
+
+```
+preview dataframe
+
+```{r}
+geo_lowy_mission_count_sf <- st_as_sf(lowy_mission_count_geo,coords = c("lon","lat"), crs = 4326)
+mapview(
+  #spatial object
+  geo_lowy_mission_count_sf, 
+  #legend display
+  legend = TRUE, 
+  
+  #at = "count", #breakpoints used for colouring
+  zcol = "count", #affects colour rendered
+  alpha = 0.2, #for lines only
+  alpha.regions = 0.4, #for shapes, including circles defined by cex
+  #circle size based on which column
+  cex = "count",
+  #layer name
+  layer.name = "Cities with diplomatic posts",
+  legend.opacity = 0.3,
+  label = geo_lowy_mission_count_sf$post_city
+  )
+
+#mapview(breweries, cex = "number.of.types")
+
+
+geo_lowy_mission_count_sf
+#https://r-spatial.github.io/mapview/articles/articles/mapview_02-advanced.html
+```
+
+
+
+```{r}
+
+# Basic scatter plot
+ggplot(lowy_mission_count_geo, aes(x=count, y=count)) + geom_point()
+# Change the point size, and shape
+ggplot(lowy_mission_count_geo, aes(x=count, y=count)) +
+  geom_point(size=0.5, shape=23, alpha = 0.5)
+
+ggplot(lowy_mission_count_geo, aes(y=count)) + 
+  geom_boxplot(outlier.colour="red", outlier.shape=8,
+                outlier.size=4)
+
+ggplot(lowy_iso_rearrange, aes(post_city, fill = post_type)) +
+  geom_histogram(binwidth = 500)
+
+```
+
