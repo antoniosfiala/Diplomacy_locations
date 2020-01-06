@@ -1,2 +1,2 @@
 # UCL_CASA_GIS
-Final GIS project
+Final CASA GIS project examining the role of GIS in front-line diplomacy
