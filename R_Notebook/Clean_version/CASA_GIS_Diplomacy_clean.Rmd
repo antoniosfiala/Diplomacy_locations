@@ -294,4 +294,122 @@ mapview(
 
 ```
 
-### Join the lat long
+#### 2.3 Add lat/long information to master data-frame
+
+Take `geo_send_country_df_dl_tbl` and `geo_city_country_df_dl_tbl` and join content with my master `lowy_posting_iso` dataset
+
+Join help from [here (GitHub)](https://stackoverflow.com/questions/1299871/how-to-join-merge-data-frames-inner-outer-left-right){target="_blank"}
+
+```{r}
+#Join send lon/lat
+geo_lowy_posting <- merge(lowy_posting_iso,geo_send_country_df_dl_tbl, by = "send_country")
+
+geo_lowy_posting <- geo_lowy_posting %>% rename(
+  send_lon =lon,
+  send_lat = lat)
+
+head(geo_lowy_posting)
+
+#Join post city lon/lat
+geo_lowy_posting <- merge(geo_lowy_posting,geo_city_country_df_dl_tbl, by = "post_city_country")
+
+geo_lowy_posting <- geo_lowy_posting %>% rename(
+  post_city_lon =lon,
+  post_city_lat = lat)
+
+head(geo_lowy_posting)
+
+#Re-arrange columns and sort table
+geo_lowy_arrange <-geo_lowy_posting
+geo_lowy_arrange = select(geo_lowy_arrange, 
+                            #sending data
+                            send_country_iso,
+                            send_country,
+                            send_lon,
+                            send_lat,
+                            #posting data
+                            post_country_iso, 
+                            post_country,
+                            post_city_country,
+                            post_city,
+                            post_city_lon,
+                            post_city_lat,
+                            post_type,
+                            post_title,
+                            #other columns
+                            everything())
+
+geo_lowy_arrange <- geo_lowy_arrange[order(geo_lowy_arrange$send_country),]
+head(geo_lowy_arrange)
+```
+
+Function to show postings by select country
+
+```{r}
+#View distinct countries to select one
+geo_send_country
+```
+
+Virdis pallette reference used in mapview found [here](https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html){target="_blank"}
+
+```{r}
+#function that assumes 'send country' column is present
+f_country_postings <- function(p_select_country,p_df){
+  
+  #Subset of dataframe for chosen country
+  sub_df <- p_df[p_df$send_country == p_select_country,]
+  
+  #country layer taking sending related columns (1-4)
+  country_layer <- sub_df[1,1:4]
+  country_layer_sf <-
+    st_as_sf(country_layer,coords=c("send_lon","send_lat"),crs = 4326)
+  
+  #posting layer taking posting related columns (5-)
+  posting_layer <- sub_df[5:12]
+  posting_layer_sf <-
+    st_as_sf(posting_layer,coords=c("post_city_lon","post_city_lat"),crs = 4326)
+  
+  map <- 
+    mapview(
+      #spatial object
+      posting_layer_sf,
+      legend = FALSE,
+      layer.name = paste(p_select_country, "diplomatic posts"),
+      alpha.regions = 0.4,
+      label = posting_layer$post_city_country,
+      zcol = "post_country",
+      col.regions = viridisLite::cividis
+        #plasma
+        
+      )+ mapview(
+      #spatial object
+      country_layer_sf, 
+      legend = FALSE,
+      layer.name = paste(p_select_country, "point"),
+      label = country_layer_sf$send_country,
+      color = "red",
+      alpha.regions = 0.4,
+      col.regions = "red")
+  return(map) 
+}
+
+
+#select country [index for row,index for column] #3 Austria
+select_country <- geo_send_country[6,1]
+select_country
+
+f_country_postings(select_country,geo_lowy_arrange)
+
+```
+
+```{r}
+
+
+
+st_as_sf(geo_lowy_arrange[1,1:4],coords=c("send_lon","send_lat"),crs = 4326)
+
+geo_lowy_arrange[5:12]
+
+```
+
+
