@@ -248,20 +248,26 @@ geo_send_country_df <- geo_send_country_df
 ###POST CITIES
 #Uncomment only when to refresh data, else use saved .csv file
 #geo_city_country_df_dl <- mutate_geocode(geo_city_country_df, post_city_country)
-
 #Save .csv file
-#write.csv(geo_city_country_df_dl,"/cloud/project/Data/GoogleAPI/Geo_City_Country_DL.csv", row.names = TRUE)
+#write.csv(geo_city_country_df_dl,"/cloud/project/Data/GoogleAPI/Geo_City_Country_DL.csv", row.names = FALSE)
+
+geo_city_country_df_dl <- 
+  read.csv("/cloud/project/Data/GoogleAPI/Geo_City_Country_DL.csv")
 
 ###SEND COUNTRIES
 #geo_send_country_df_dl <- mutate_geocode(geo_send_country_df, send_country)
 
 #Save .csv file
-#write.csv(geo_send_country_df_dl,"/cloud/project/Data/GoogleAPI/Geo_Send_Country_DL.csv", row.names = TRUE)
+#write.csv(geo_send_country_df_dl,"/cloud/project/Data/GoogleAPI/Geo_Send_Country_DL.csv", row.names = FALSE)
+
+geo_send_country_df_dl <- 
+  read.csv("/cloud/project/Data/GoogleAPI/Geo_Send_Country_DL.csv")
 
 #Preview table
 head(geo_city_country_df_dl)
 head(geo_send_country_df_dl)
 ```
+
 
 #### 2.3 Preview geo-coded sites on map
 ```{r}
@@ -441,6 +447,11 @@ geo_lowy_custom$query2 = paste(
   sep=", ")
 
 geo_lowy_custom
+
+#Save .csv file
+write.csv(geo_lowy_custom,"/cloud/project/Data/GoogleAPI/geo_lowy_custom_full_df.csv", row.names = FALSE)
+
+
 ```
 
 ```{r eval=FALSE}
@@ -504,7 +515,7 @@ Build function to geocode search queries by desired city, save output as csv and
 p_df <- geo_lowy_custom
 
 ###Filter parameter
-p_city_filter <- "Tirana"
+p_city_filter <- "Bratislava"
 
 ###Subset of dataframe for chosen country
 sub_city_df <- p_df[p_df$post_city == p_city_filter,]
@@ -531,7 +542,7 @@ sub_city_geo_sf <-
   st_as_sf(sub_city_df_dl,coords=c("lon","lat"),crs = 4326)
 
 #City lat longs
-mapview(
+exact_map <- mapview(
       #spatial object
       sub_city_sf,
       legend = FALSE,
@@ -539,7 +550,6 @@ mapview(
       alpha.regions = 0.4,
       label = sub_city_sf$post_city_country,
       cex = 10
-      
       
       #Exact lat longs
       )+ mapview(
@@ -553,16 +563,92 @@ mapview(
       col.regions = "red",
       cex = 0.1)
 
+exact_map
+
+mapshot(exact_map, url = paste("/cloud/project/Data/GoogleAPI/",p_city_filter,"map.html",sep="_"))
+
+
 ```
+
+```{r}
+#Create function out of above
+
+f_exact_city_postings <- function(p_city_filter,p_df){
+  
+  ###Subset of dataframe for chosen country
+  sub_city_df <- p_df[p_df$post_city == p_city_filter,]
+
+  ###Geocode and save
+  sub_city_df_dl <- mutate_geocode(sub_city_df, query2)
+
+  #Save .csv file
+  write.csv(sub_city_df_dl,paste("/cloud/project/Data/GoogleAPI/",p_city_filter,"geocoded.csv",sep = "_"), row.names = TRUE)
+  
+  #create spatial objects
+  sub_city_sf <- 
+    st_as_sf(sub_city_df_dl,coords=c("post_city_lon","post_city_lat"),crs = 4326)
+
+  sub_city_geo_sf <-
+    st_as_sf(sub_city_df_dl,coords=c("lon","lat"),crs = 4326)
+
+  #City lat longs
+  exact_map <- mapview(
+      #spatial object
+      sub_city_sf,
+      legend = FALSE,
+      layer.name = "City coordinates",
+      alpha.regions = 0.4,
+      label = sub_city_sf$post_city_country,
+      cex = 10
+      
+      #Exact lat longs
+      )+ mapview(
+      #spatial object
+      sub_city_geo_sf,
+      legend = FALSE,
+      layer.name = "Geocoded exact coordinates",
+      label = sub_city_geo_sf$query2,
+      color = "red",
+      alpha.regions = 0.4,
+      col.regions = "red",
+      cex = 0.1)
+  
+  mapshot(exact_map, url = paste("/cloud/project/Data/MapFiles/",p_city_filter,"map.html",sep="_"))
+
+  #return dl table,map
+  return_list <- list(df = sub_city_df_dl,map = exact_map)
+  return(return_list)
+}
+
+```
+
+```{r}
+#function parameters
+city_f_df <- geo_lowy_custom
+#Filter parameter
+city_f_filter <- "Tehran"
+
+###run function
+f_out <- f_exact_city_postings(p_city_filter = city_f_filter,p_df = city_f_df)
+f_out$map
+```
+
 
 
 
 
 ```{r}
 #Playground
+f_out$df
 
 
+```
 
+### 3.0 Load a.k.a. bulk geocode and analyse {#h_load}
 
+Section 2.0 preped data and tested geocoding on small samples, section 3.0 will geocode en masse and perform further analysis
+
+```{r}
+geo_lowy_custom
 ```
 
