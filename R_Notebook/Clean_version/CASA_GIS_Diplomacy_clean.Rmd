@@ -2,106 +2,237 @@
 title: "The case for more GIS in front-line diplomacy"
 output: html_notebook
 ---
-
-# First Section
-
-### READ ME {#h_header}
-Test scrolling => [test link](#h_index)
-This notebook outlines the process and code outputs associated with the project "" carried out for Spatial Data Science [Master's course](https://www.ucl.ac.uk/bartlett/casa/programmes/msc-spatial-data-science-and-visualisation){target="_blank"} at the [Barlett Centre for Advanced Spatial Analysis](https://www.ucl.ac.uk/bartlett/casa/) at **U**niversity **C**ollege **L**ondon.
-
-**This document aims to:**<br>
-- outline the process of data processing<br>
-- show outputs such as tables/maps<br>
-
-**This document does not intended to:**<br>
-- suppliment the final submission with additional analysis
-
-**Final submission** and analysis can be found [here]() `13.01.2020`<br>
-**Amended submission based on feedback** `not yet available`
-
-
-**This document aims to:**<br>
-- outline the process of data processing<br>
-- show outputs such as tables/maps<br>
-
-**This document does not intended to:**<br>
-- suppliment the final submission with additional analysis
-
-**Final submission** and analysis can be found [here]() `13.01.2020`<br>
-**Amended submission based on feedback** `not yet available`
-
-**This document aims to:**<br>
-- outline the process of data processing<br>
-- show outputs such as tables/maps<br>
-
-**This document does not intended to:**<br>
-- suppliment the final submission with additional analysis
-
-**Final submission** and analysis can be found [here]() `13.01.2020`<br>
-**Amended submission based on feedback** `not yet available`
-
-**This document aims to:**<br>
-- outline the process of data processing<br>
-- show outputs such as tables/maps<br>
-
-**This document does not intended to:**<br>
-- suppliment the final submission with additional analysis
-
-**Final submission** and analysis can be found [here]() `13.01.2020`<br>
-**Amended submission based on feedback** `not yet available`
-
-**This document aims to:**<br>
-- outline the process of data processing<br>
-- show outputs such as tables/maps<br>
-
-**This document does not intended to:**<br>
-- suppliment the final submission with additional analysis
-
-**Final submission** and analysis can be found [here]() `13.01.2020`<br>
-**Amended submission based on feedback** `not yet available`
-
-
-### INDEX{#h_index}
 <br>
-[check if can have links to scroll further down the document]
+
+### 0.0 Read me {#h_header}
+
+This notebook outlines the process and code outputs associated with a project on the role of GIS in front-line diplomacy.
+
+**This document**:<br>
+- _aims to_ outline the process of data processing<br>
+- _aims to_ show outputs such as tables/maps<br>
+- _does not aim to_ suppliment the final submission with additional analysis
+
+**Final submission** and analysis can be found [here]() `13.01.2020`<br>
+
+#### 0.1 Index {#h_index}
+- [0.0 Read me](#h_readme)<br>
+-- [0.1 Index](#h_index)<br>
+-- [0.2 Process overview](#h_index)<br>
+-- [0.3 Packages](#h_packages)<br>
+- [1.0 Read me](#h_extract)<br>
+-- [1.1 Read me](#h_header)<br>
+-- [1.2 Read me](#h_header)<br>
+
+#### 0.2 Process overview {#h_process}
+
+following simple: Extract-Transform-Load framework
+
+[insert link and image of process here]
+
+#### 0.3 Packages {#h_packages}
+
+Below are the packages installed and loaded for use in this workflow.
+```{r eval=FALSE}
+library(readr)
+library(countrycode)
+library(tibble)
+library(tidyverse)
+library(ggmap)
+library(sf)
+library(mapview)
+library(dplyr)
+```
+
+#### 0.4 References {#h_reference}
+Add any links to reference as used in the code:<br>
+- https://stackoverflow.com/questions/20937682/r-trying-to-find-latitude-longitude-data-for-cities-in-europe-and-getting-geocod
+- followed material [here](https://github.com/vincentarelbundock/countrycode) github
+
+
+### 1.0 Extract data {#h_extract}
+
+Data is extracted from the Lowy Institute's Global Diplomacy Index [site](https://globaldiplomacyindex.lowyinstitute.org/about.html){target="_blank"} as a .csv file
+
+At time of writing, the site contains data for 2016,2017 and 2019
+
+```{r}
+###Confirm working directory
+print(getwd())
+
+###open latest csv document
+lowy_raw_data <- read.csv("/cloud/project/Data/2019_LowyInstituteGlobalDiplomacyIndex_FullDataset.csv")
+```
+
+#### 1.1 Adjust data frame {#h_table_adjust}
+
+Ensure data frame has correct types and rename columns with code below.
+
+Type check and list all columns
+```{r}
+###check for factor columns and change them to character columns
+#more of a pre-emptive measure
+i <- sapply(lowy_raw_data, is.factor)
+lowy_raw_data[i] <- lapply(lowy_raw_data[i], as.character)
+
+###list of all columns
+colnames(lowy_raw_data)
+
+#Summarise all unique values in crude print out
+for(column in colnames(lowy_raw_data)){
+  cat(column,"has",length(apply(lowy_raw_data[column],2,unique)),"unique values\n")
+}
+```
+
+
+```{r}
+column <- "COUNTRY"
+
+lengths(lapply(lowy_raw_data[column],unique))
+```
+
+
+
+Rename columns and show head of table
+```{r}
+#new data frame
+lowy_renamed <- lowy_raw_data
+
+#rename columns
+lowy_renamed <- lowy_renamed %>% rename(
+  send_country=COUNTRY,
+  #metadata
+  meta_gdp_usd_billions = GDP..B..USD.,
+  meta_population_millions = POPULATION..M.,
+  #ranking columns
+  rank_g20 = G20.RANK,
+  rank_OECD = OECD.RANK,
+  rank_asia = ASIA.RANK,
+  rank_overall = OVERALL.RANK,
+  #post country info
+  post_city = POST.CITY,
+  post_country = POST.COUNTRY,
+  post_type = TYPE.OF.POST,
+  post_title = POST.TYPE.TITLE
+  )
+
+#review dataframe
+head(lowy_renamed,2)
+```
+
+#### 1.2 Slim data frame {#h_table_slim}
+Separate unwanted columns into separate data frames and continue working with absolutely necessary columns.
+
+```{r}
+#data frame with all metadata (GDP and population)
+lowy_meta <- lowy_renamed[, c("send_country","meta_population_millions","meta_gdp_usd_billions")]
+
+#data frame with all rankings (G20, OECD, Asia and overall)
+lowy_rank <- lowy_renamed[,c("send_country","rank_g20","rank_OECD","rank_asia","rank_overall")]
+
+#data frame with information on sending country, post city, country as well as post type and title
+lowy_posting <- lowy_renamed[,c("send_country","post_city","post_country","post_type","post_title")]
+
+#quick preview of data frame to work on
+head(lowy_posting,2)
+```
+
+### 2.0 Transform data {#h_transform}
+
+This section transforms and enhance data in the slimmed down `lowy_posting` data frame.
+- it will add iso keys for countries
+- it will geo-code cities to add provisional latitude/longitude points for the lowy institute _as is_
 <br>
-### PROCESS DIAGRAM
 
-[Step 1] => [Step 2] => [Step 3] from [draw.io](https://www.draw.io){target="_blank"}
+#### 2.1 Add country iso codes to data frame
 
-Test scrolling => [test link](#h_header)
+-Set up empty lists and new data frame
+-cycle through all country names and call the `countrycode()` function defining `sourcevar`, `destination`, `origin` before appending the result to one of our empty lists
 
-explicit: you give a custom name to a header ## Test {#test} and later refer to it with a link syntax: see [the relevant section](#test)
+```{r}
+#Set up some blank objects
+
+#iso encoded dataframe
+lowy_posting_iso <- lowy_posting
+#country_iso list [column 1]
+iso_list_send_country <- c()
+#post_country_iso list [column 3]
+iso_list_post_country <- c()
+```
+
+```{r}
+#sending country column (1)
+for(country in lowy_posting[1]){
+  country_iso <- countrycode(
+    #call the entry of 'Country' for the row_number currently being taken by for loop
+    sourcevar = country, 
+    #three letter iso code
+    destination = "genc3c", 
+    #based on english language names
+    origin = "country.name")
+  
+  #add value to a list
+  iso_list_send_country <- append(iso_list_send_country,country_iso)
+}
+
+#Post country column (3)
+for(country in lowy_posting[3]){
+  post_country_iso <- countrycode(
+    #call the entry of 'Country' for the row_number currently being taken by for loop
+    sourcevar = country, 
+    #three letter iso code
+    destination = "genc3c", 
+    #based on english language names
+    origin = "country.name")
+  
+  #add value to a list
+  iso_list_post_country <- append(iso_list_post_country,post_country_iso)
+}
+
+#explore our list
+iso_list_post_country[1:3]
+```
+
+Join the new iso columns to the `lowy_posting_iso`
+
+```{r}
+#create new columns
+lowy_posting_iso$send_country_iso = iso_list_send_country
+lowy_posting_iso$post_country_iso = iso_list_post_country
+
+#preview data frame
+head(lowy_posting_iso)
+```
+
+#### 2.2 Geo-code post city sites
+Geo-coding using google's geocode API via `mutate_geocode()` function
+
+Set api key unique to you `register_google(key = "insert key here")`
+```{r echo=FALSE}
+register_google(key = "AIzaSyDNlUg_mclZ4kSJMDvbj_UVMHds8vkz2nE")
+```
+
+Geocoding using combination of `post_city`and `post_country` columns to avoiding geotaggin the wrong localtion globally.
+For example: the city of Ganja in Azerbaijan
+
+```{r}
+#concatenate post city and post country columns
+lowy_posting_iso$post_city_country = paste(
+  lowy_posting_iso$post_city,
+  lowy_posting_iso$post_country,
+  sep=", ")
+
+#geo-c - concatenated city and country names
+geo_city_country <- distinct(lowy_posting_iso,post_city_country)
+geo_city_country_df <- as.data.frame(geo_city_country)
+
+#Uncomment only when to refresh data, else use saved .csv file
+#geo_city_df_dl <- mutate_geocode(geo_city_df, POST.CITY)
+
+```
 
 
+```{r}
+geo_city_country
+```
 
-## Second Section
-
-### Third Section
-
-
-<script type="text/javascript">
-  // When the document is fully rendered...
-  $(document).ready(function() {
-    // ...select all header elements...
-    $('h1, h2, h3, h4, h5').each(function() {
-      // ...and add an id to them corresponding to their 'titles'
-      $(this).attr('id', $(this).html());
-    });
-  });
-</script>
-
-
-<a href="#First Section">Go to first section</a><br>
-<a href="#Second Section">Go to second section</a><br>
-<a href="#Third Section">Go to third section</a>
-
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-
-        document.querySelector(this.getAttribute('href')).scrollIntoView({
-            behavior: 'smooth'
-        });
-    });
-});

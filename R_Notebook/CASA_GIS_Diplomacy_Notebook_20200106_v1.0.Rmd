@@ -37,7 +37,7 @@ explicit: you give a custom name to a header ## Test {#test} and later refer to 
 
 
 #### Step 1 install & import packages
-
+DONE
 ```{r}
 #Installation of packages
 #install.packages("countrycode")
@@ -49,7 +49,7 @@ explicit: you give a custom name to a header ## Test {#test} and later refer to 
 #install.packages("dplyr")
 ```
 
-
+DONE
 ```{r}
 library(readr)
 library(countrycode)
@@ -66,12 +66,12 @@ library(dplyr)
 #### STEP 2 - geocode by city name
 
 **resources used**:<br> https://stackoverflow.com/questions/20937682/r-trying-to-find-latitude-longitude-data-for-cities-in-europe-and-getting-geocod
-
+DONE
 ```{r}
 getwd()
 ```
 
-
+DONE
 ```{r}
 #geocode with R by city name
 
@@ -88,7 +88,7 @@ colnames(lowy_raw_data)
 
 
 
-
+DONE
 ```{r}
 #8 city; 11 post type title; 10 type of post;
 
