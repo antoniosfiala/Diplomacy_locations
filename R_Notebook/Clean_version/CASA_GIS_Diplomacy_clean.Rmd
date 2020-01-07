@@ -204,16 +204,18 @@ lowy_posting_iso$post_country_iso = iso_list_post_country
 head(lowy_posting_iso)
 ```
 
-#### 2.2 Geo-code post city sites
+#### 2.2 Geo-code post city sites and send countries
 Geo-coding using google's geocode API via `mutate_geocode()` function
 
 Set api key unique to you `register_google(key = "insert key here")`
 ```{r echo=FALSE}
-register_google(key = "AIzaSyDNlUg_mclZ4kSJMDvbj_UVMHds8vkz2nE")
+#register_google(key = "")
 ```
 
 Geocoding using combination of `post_city`and `post_country` columns to avoiding geotaggin the wrong localtion globally.
 For example: the city of Ganja in Azerbaijan
+
+For send countries, the send country column only will be used.
 
 ```{r}
 #concatenate post city and post country columns
@@ -226,13 +228,70 @@ lowy_posting_iso$post_city_country = paste(
 geo_city_country <- distinct(lowy_posting_iso,post_city_country)
 geo_city_country_df <- as.data.frame(geo_city_country)
 
+#geo-code - sending countries
+geo_send_country <- distinct(lowy_posting_iso,send_country)
+geo_send_country_df <- as.data.frame(geo_send_country)
+
+```
+
+Call mutate geocode function to carry out the geo-coding.<br>
+
+```{r eval=FALSE}
+#sample set up (uncomment as needed)
+#geo_city_country_df <- head(geo_city_country_df,4)
+#geo_send_country_df <- head(geo_send_country_df,4)
+
+#full data sets
+geo_city_country_df <- geo_city_country_df
+geo_send_country_df <- geo_send_country_df
+
+###POST CITIES
 #Uncomment only when to refresh data, else use saved .csv file
-#geo_city_df_dl <- mutate_geocode(geo_city_df, POST.CITY)
+#geo_city_country_df_dl <- mutate_geocode(geo_city_country_df, post_city_country)
 
+#Save .csv file
+#write.csv(geo_city_country_df_dl,"/cloud/project/Data/GoogleAPI/Geo_City_Country_DL.csv", row.names = TRUE)
+
+###SEND COUNTRIES
+#geo_send_country_df_dl <- mutate_geocode(geo_send_country_df, send_country)
+
+#Save .csv file
+#write.csv(geo_send_country_df_dl,"/cloud/project/Data/GoogleAPI/Geo_Send_Country_DL.csv", row.names = TRUE)
+
+#Preview table
+head(geo_city_country_df_dl)
+head(geo_send_country_df_dl)
 ```
 
-
+#### 2.3 Preview geo-coded sites on map
 ```{r}
-geo_city_country
+#Convert to tibble
+geo_city_country_df_dl_tbl <- as_tibble(geo_city_country_df_dl)
+geo_send_country_df_dl_tbl <- as_tibble(geo_send_country_df_dl)
+
+#Projection based on EPSG 4326 which is in line with google
+geo_city_sf <- st_as_sf(geo_city_country_df_dl_tbl,coords = c("lon","lat"), crs = 4326)
+geo_country_sf <- st_as_sf(geo_send_country_df_dl_tbl,coords = c("lon","lat"), crs = 4326)
+
+#Open up map with all points (no extra info)
+mapview(
+  #spatial object
+  geo_city_sf, 
+  legend = FALSE,
+  layer.name = "Post cities",
+  alpha.regions = 0.3,
+  title = "Preview map") + 
+  
+  mapview(
+    geo_country_sf, 
+    legend = FALSE,
+    layer.name = "Sending countries",
+    color = "red",
+    alpha.regions = 0.4,
+    col.regions = "red"
+    
+    )
+
 ```
 
+### Join the lat long
