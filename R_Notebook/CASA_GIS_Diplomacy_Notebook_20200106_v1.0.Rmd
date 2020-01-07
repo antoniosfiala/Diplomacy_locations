@@ -215,7 +215,6 @@ lowy_iso
 ```{r}
 #create lists of distinct places to geocode
 
-register_google(key = "AIzaSyDNlUg_mclZ4kSJMDvbj_UVMHds8vkz2nE")
 
 #trial 1 - only city names
 geo_city <- distinct(lowy_iso,POST.CITY)

@@ -350,6 +350,9 @@ Function to show postings by select country
 geo_send_country
 ```
 
+##### Output
+Create function to visualise diplomatic postings by country
+
 Virdis pallette reference used in mapview found [here](https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html){target="_blank"}
 
 ```{r}
@@ -395,21 +398,171 @@ f_country_postings <- function(p_select_country,p_df){
 
 
 #select country [index for row,index for column] #3 Austria
-select_country <- geo_send_country[6,1]
+select_country <- "Greece" #geo_send_country[6,1]
 select_country
 
 f_country_postings(select_country,geo_lowy_arrange)
 
 ```
 
+##### Output
+Visualise all cities with count of desired field
+
 ```{r}
+#master df
+geo_lowy_arrange
 
+geo_lowy_count <- geo_lowy_arrange %>% 
+  group_by(post_city_country) %>% 
+  summarise(count = n()) %>% 
+  arrange(desc(count))
 
-
-st_as_sf(geo_lowy_arrange[1,1:4],coords=c("send_lon","send_lat"),crs = 4326)
-
-geo_lowy_arrange[5:12]
+geo_lowy_count
 
 ```
 
+##### Output
+Geocode locations within cities based on data within Lowy dataset to create search queries
+
+```{r}
+geo_lowy_custom <- geo_lowy_arrange
+
+#Search query 1: send country, post title, near lat/long
+#not currently viable on how to do this
+
+#Search query 2: send country, post title, post city_country column
+
+#concatenate new column
+#concatenate post city and post country columns
+geo_lowy_custom$query2 = paste(
+  geo_lowy_custom$send_country,
+  geo_lowy_custom$post_title,
+  geo_lowy_custom$post_city_country,
+  sep=", ")
+
+geo_lowy_custom
+```
+
+```{r eval=FALSE}
+#sample set up (uncomment as needed)
+geo_lowy_custom <- head(geo_lowy_custom,4)
+
+#full data sets
+### [PLACEHOLDER]
+
+###SEND COUNTRIES
+geo_lowy_custom_dl <- mutate_geocode(geo_lowy_custom, query2)
+
+#Save .csv file
+write.csv(geo_lowy_custom_dl,"/cloud/project/Data/GoogleAPI/geo_lowy_custom_dl.csv", row.names = TRUE)
+
+#Preview table
+head(geo_lowy_custom_dl)
+```
+
+```{r}
+#cross check, city lat long vs point embassy lat long
+
+#create spatial objects
+geo_lowy_post_city_sf <- 
+  st_as_sf(geo_lowy_custom_dl,coords=c("post_city_lon","post_city_lat"),crs = 4326)
+
+geo_lowy_exact_sf <-
+  st_as_sf(geo_lowy_custom_dl,coords=c("lon","lat"),crs = 4326)
+
+#City lat longs
+mapview(
+      #spatial object
+      geo_lowy_post_city_sf,
+      legend = FALSE,
+      layer.name = "City coordinates",
+      alpha.regions = 0.4,
+      label = geo_lowy_custom_dl$post_city_country,
+      cex = 10
+      
+      
+      #Exact lat longs
+      )+ mapview(
+      #spatial object
+      geo_lowy_exact_sf,
+      legend = FALSE,
+      layer.name = "Geocoded exact coordinates",
+      label = geo_lowy_custom_dl$query2,
+      color = "red",
+      alpha.regions = 0.4,
+      col.regions = "red",
+      cex = 0.1)
+
+```
+
+##### Output
+
+Build function to geocode search queries by desired city, save output as csv and visualise on map
+
+```{r}
+###full data frame
+p_df <- geo_lowy_custom
+
+###Filter parameter
+p_city_filter <- "Tirana"
+
+###Subset of dataframe for chosen country
+sub_city_df <- p_df[p_df$post_city == p_city_filter,]
+sub_city_df
+
+###Geocode and save
+sub_city_df_dl <- mutate_geocode(sub_city_df, query2)
+
+#Save .csv file
+write.csv(sub_city_df_dl,paste("/cloud/project/Data/GoogleAPI/",p_city_filter,"geocoded.csv",sep = "_"), row.names = TRUE)
+
+#Preview table
+sub_city_df_dl
+```
+
+```{r}
+###Spatial objects
+
+#create spatial objects
+sub_city_sf <- 
+  st_as_sf(sub_city_df_dl,coords=c("post_city_lon","post_city_lat"),crs = 4326)
+
+sub_city_geo_sf <-
+  st_as_sf(sub_city_df_dl,coords=c("lon","lat"),crs = 4326)
+
+#City lat longs
+mapview(
+      #spatial object
+      sub_city_sf,
+      legend = FALSE,
+      layer.name = "City coordinates",
+      alpha.regions = 0.4,
+      label = sub_city_sf$post_city_country,
+      cex = 10
+      
+      
+      #Exact lat longs
+      )+ mapview(
+      #spatial object
+      sub_city_geo_sf,
+      legend = FALSE,
+      layer.name = "Geocoded exact coordinates",
+      label = sub_city_geo_sf$query2,
+      color = "red",
+      alpha.regions = 0.4,
+      col.regions = "red",
+      cex = 0.1)
+
+```
+
+
+
+
+```{r}
+#Playground
+
+
+
+
+```
 
