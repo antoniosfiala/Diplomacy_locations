@@ -41,7 +41,14 @@ library(tidyverse)
 library(ggmap)
 library(sf)
 library(mapview)
+library(plyr)
+
 library(dplyr)
+
+library(raster)
+library(fpc)
+
+library(OpenStreetMap)
 ```
 
 #### 0.4 References {#h_reference}
@@ -454,25 +461,53 @@ write.csv(geo_lowy_custom,"/cloud/project/Data/GoogleAPI/geo_lowy_custom_full_df
 
 ```
 
-```{r eval=FALSE}
+```{r}
 #sample set up (uncomment as needed)
-geo_lowy_custom <- head(geo_lowy_custom,4)
+#geo_lowy_custom <- head(geo_lowy_custom,4)
 
 #full data sets
 ### [PLACEHOLDER]
+#geo_lowy_custom <- geo_lowy_custom
 
 ###SEND COUNTRIES
-geo_lowy_custom_dl <- mutate_geocode(geo_lowy_custom, query2)
+#geo_lowy_custom_dl <- mutate_geocode(geo_lowy_custom, query2)
 
 #Save .csv file
-write.csv(geo_lowy_custom_dl,"/cloud/project/Data/GoogleAPI/geo_lowy_custom_dl.csv", row.names = TRUE)
+#write.csv(geo_lowy_custom_dl,"/cloud/project/Data/GoogleAPI/geo_lowy_custom_full_geocode.csv", row.names = FALSE)
+
+geo_lowy_custom_dl <- read.csv("/cloud/project/Data/GoogleAPI/geo_lowy_custom_full_geocode.csv")
+
+#Filter out NA values (around 44 values)
+geo_lowy_NA_values <- geo_lowy_custom_dl %>%
+  select(everything()) %>%
+  filter(is.na(lon))
+
+geo_lowy_no_NA <- geo_lowy_custom_dl %>%
+  select(everything()) %>%
+  filter(!is.na(lon))
 
 #Preview table
-head(geo_lowy_custom_dl)
+report_full_length <-length(geo_lowy_custom_dl$send_country)
+report_na_length <- length(geo_lowy_NA_values$send_country)
+report_non_na_length <- length(geo_lowy_no_NA$send_country)
+
+cat("There are,", report_full_length,"entries in the complete data frame.","\nFrom these,",report_na_length,"are NA/blank. (",report_na_length/report_full_length*100,"% )","\nIn total,",report_non_na_length,"entries have valid coordinates.","\nTotal coverage is:",report_non_na_length/report_full_length*100,"%")
+
 ```
+
+Understanding the NA values, avoid these sample case analysis
+
+```{r}
+#dyplr count function
+geo_lowy_NA_values %>%
+  count(post_city)
+```
+
 
 ```{r}
 #cross check, city lat long vs point embassy lat long
+
+geo_lowy_custom_dl <- geo_lowy_no_NA #clean dataset with no NA values
 
 #create spatial objects
 geo_lowy_post_city_sf <- 
@@ -503,7 +538,6 @@ mapview(
       alpha.regions = 0.4,
       col.regions = "red",
       cex = 0.1)
-
 ```
 
 ##### Output
@@ -649,6 +683,187 @@ f_out$df
 Section 2.0 preped data and tested geocoding on small samples, section 3.0 will geocode en masse and perform further analysis
 
 ```{r}
-geo_lowy_custom
+geo_lowy_no_NA
 ```
+
+### END TO END CLUSTER PREP
+```{r}
+
+### PACKAGES
+library(readr)
+library(countrycode)
+library(tibble)
+library(tidyverse)
+library(ggmap)
+library(sf)
+library(mapview)
+library(plyr)
+library(dplyr)
+library(raster)
+library(fpc)
+library(OpenStreetMap)
+
+### DATA
+geo_lowy_custom_dl <- read.csv("/cloud/project/Data/GoogleAPI/geo_lowy_custom_full_geocode.csv")
+
+#Filter out NA values (around 44 values)
+geo_lowy_NA_values <- geo_lowy_custom_dl %>%
+  dplyr::select(everything()) %>%
+  dplyr::filter(is.na(lon))
+
+geo_lowy_no_NA <- geo_lowy_custom_dl %>%
+  dplyr::select(everything()) %>%
+  dplyr::filter(!is.na(lon))
+
+#Preview table
+report_full_length <-length(geo_lowy_custom_dl$send_country)
+report_na_length <- length(geo_lowy_NA_values$send_country)
+report_non_na_length <- length(geo_lowy_no_NA$send_country)
+
+cat("There are,", report_full_length,"entries in the complete data frame.","\nFrom these,",report_na_length,"are NA/blank. (",report_na_length/report_full_length*100,"% )","\nIn total,",report_non_na_length,"entries have valid coordinates.","\nTotal coverage is:",report_non_na_length/report_full_length*100,"%")
+
+###FUNCTION
+f_exact_city_postings <- function(p_city_filter,p_df){
+  
+  ###Subset of dataframe for chosen country
+  sub_city_df <- p_df[p_df$post_city == p_city_filter,]
+
+  #create spatial objects
+  sub_city_sf <- 
+    st_as_sf(sub_city_df,coords=c("post_city_lon","post_city_lat"),crs = 4326)
+
+  sub_city_geo_sf <-
+    st_as_sf(sub_city_df,coords=c("lon","lat"),crs = 4326)
+
+  #City lat longs
+  exact_map <- mapview(
+      #spatial object
+      sub_city_sf,
+      legend = FALSE,
+      layer.name = "City coordinates",
+      alpha.regions = 0.4,
+      label = sub_city_sf$post_city_country,
+      cex = 10
+      
+      #Exact lat longs
+      )+ mapview(
+      #spatial object
+      sub_city_geo_sf,
+      legend = FALSE,
+      layer.name = "Geocoded exact coordinates",
+      label = sub_city_geo_sf$query2,
+      color = "red",
+      alpha.regions = 0.4,
+      col.regions = "red",
+      cex = 0.1)
+  
+  mapshot(exact_map, url = paste("/cloud/project/Data/MapFiles/",p_city_filter,"map.html",sep="_"))
+
+  #return dl table,map
+  return_list <- list(df = sub_city_df,map = exact_map)
+  return(return_list)
+}
+
+###PARAMETERS
+#function parameters
+city_f_df <- geo_lowy_no_NA
+#Filter parameter
+city_f_filter <- "Nairobi"
+
+###run function
+f_out <- f_exact_city_postings(p_city_filter = city_f_filter,p_df = city_f_df)
+f_out$map
+
+#extract coordinate columns
+db_coordinates <- f_out$df[16:17]
+
+db_coordinates <- db_coordinates[order(db_coordinates$lat),]
+db_coordinates <- db_coordinates[-(1:5),]
+
+#now run the dbscan analysis
+db <- fpc::dbscan(db_coordinates, eps = 0.002, MinPts = 2)
+#now plot the results
+plot(db, db_coordinates, main = "DBSCAN Output", frame = F)
+#plot(Borough, add=T)
+
+db_coordinates
+
+```
+
+
+
+Amend function to avoid geocoding each time, use geocoded dataset
+
+```{r}
+f_exact_city_postings <- function(p_city_filter,p_df){
+  
+  ###Subset of dataframe for chosen country
+  sub_city_df <- p_df[p_df$post_city == p_city_filter,]
+
+  #create spatial objects
+  sub_city_sf <- 
+    st_as_sf(sub_city_df,coords=c("post_city_lon","post_city_lat"),crs = 4326)
+
+  sub_city_geo_sf <-
+    st_as_sf(sub_city_df,coords=c("lon","lat"),crs = 4326)
+
+  #City lat longs
+  exact_map <- mapview(
+      #spatial object
+      sub_city_sf,
+      legend = FALSE,
+      layer.name = "City coordinates",
+      alpha.regions = 0.4,
+      label = sub_city_sf$post_city_country,
+      cex = 10
+      
+      #Exact lat longs
+      )+ mapview(
+      #spatial object
+      sub_city_geo_sf,
+      legend = FALSE,
+      layer.name = "Geocoded exact coordinates",
+      label = sub_city_geo_sf$query2,
+      color = "red",
+      alpha.regions = 0.4,
+      col.regions = "red",
+      cex = 0.1)
+  
+  mapshot(exact_map, url = paste("/cloud/project/Data/MapFiles/",p_city_filter,"map.html",sep="_"))
+
+  #return dl table,map
+  return_list <- list(df = sub_city_df,map = exact_map)
+  return(return_list)
+}
+```
+
+```{r}
+#function parameters
+city_f_df <- geo_lowy_no_NA
+#Filter parameter
+city_f_filter <- "Tehran"
+
+###run function
+f_out <- f_exact_city_postings(p_city_filter = city_f_filter,p_df = city_f_df)
+f_out$map
+```
+
+#### Cluster work
+
+```{r}
+#extract coordinate columns
+db_coordinates <- f_out$df[16:17]
+db_coordinates
+
+#first extract the points from the spatial points data frame
+BluePlaquesSubPoints <- data.frame(BluePlaquesSub@coords[,1:2])
+#now run the dbscan analysis
+db <- fpc::dbscan(BluePlaquesSubPoints, eps = 700, MinPts = 4)
+#now plot the results
+plot(db, BluePlaquesSubPoints, main = "DBSCAN Output", frame = F)
+plot(Borough, add=T)
+
+```
+
+
 
