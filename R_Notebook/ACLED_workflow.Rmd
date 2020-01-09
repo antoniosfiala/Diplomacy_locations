@@ -1,0 +1,41 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+# install.packages("jsonlite")
+# install.packages("data.table")
+# install.packages("lubridate")
+# install.packages("stringr")
+# install.packages("ggplot2")
+
+library(jsonlite)
+library(data.table)
+library(lubridate)
+library(stringr)
+library(ggplot2)
+
+```
+
+
+```{r}
+
+source("/cloud/project/acled_api_pull.R")
+
+#make a list of countries you want data about
+lcblist <- c("Iran")
+
+#use lapply to run the getACLED function for each country
+ACLED_2019_df <- getACLED("Iran", 2016)
+lcb_data_list <- lapply(lcblist, getACLED)
+
+#combine the results into a single data.table
+lcb <- rbindlist(lcb_data_list)
+
+# remove the big list
+rm(lcb_data_list)
+
+
+```
+

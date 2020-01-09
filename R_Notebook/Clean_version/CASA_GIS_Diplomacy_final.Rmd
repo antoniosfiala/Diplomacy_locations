@@ -88,22 +88,13 @@ for(column in colnames(lowy_raw_data)){
 }
 ```
 
-
-```{r}
-column <- "COUNTRY"
-
-lengths(lapply(lowy_raw_data[column],unique))
-```
-
-
-
 Rename columns and show head of table
 ```{r}
 #new data frame
 lowy_renamed <- lowy_raw_data
-
+lowy_renamed
 #rename columns
-lowy_renamed <- lowy_renamed %>% rename(
+lowy_renamed <- lowy_renamed %>% dplyr::rename(
   send_country=COUNTRY,
   #metadata
   meta_gdp_usd_billions = GDP..B..USD.,
