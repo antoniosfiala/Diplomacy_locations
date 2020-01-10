@@ -428,8 +428,6 @@ Geocode locations within cities based on data within Lowy dataset to create sear
 ```{r}
 geo_lowy_custom <- geo_lowy_arrange
 
-#Search query 1: send country, post title, near lat/long
-#not currently viable on how to do this
 
 #Search query 2: send country, post title, post city_country column
 

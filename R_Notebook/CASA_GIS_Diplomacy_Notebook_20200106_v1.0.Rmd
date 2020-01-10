@@ -383,4 +383,3 @@ ggplot(lowy_iso_rearrange, aes(post_city, fill = post_type)) +
   geom_histogram(binwidth = 500)
 
 ```
-
