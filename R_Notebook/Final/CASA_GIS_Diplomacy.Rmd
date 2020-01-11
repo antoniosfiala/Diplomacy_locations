@@ -2,7 +2,8 @@
 title: "The case for more GIS in front-line diplomacy"
 output: html_notebook
 ---
-|| [**0.0|READ ME**](#h_0.0_readme) || [1.0|EXTRACT](#h_1.0_extract) || [2.0|TRANSFORM](#h_2.0_transform) || [3.0|LOAD and ANALYSE](#h_3.0_analyse) || <br>
+
+|| [**0.0|READ ME**](#h_0.0_readme) || [1.0|EXTRACT](#h_0.0_readme) || [2.0|TRANSFORM](#h_2.0_transform) || [3.0|LOAD and ANALYSE](#h_3.0_analyse) || <br>
 
 ### 0.0 Read me {#h_0.0_readme}
 > **Purpose of section**: brief outline of document, its content and pre-requisits<br>
@@ -22,14 +23,15 @@ This notebook outlines the _process_ and _code_ outputs associated with a projec
 
 #### 0.2 Document index {#h_0.2_index}
 
-0. [Read me]()
+0. [Read me](#h_0.0_readme)
     + || [0.1-Outline](#h_0.1_outline) || [0.2-Index](#h_0.2_index) || [0.3-Setup](#h_0.3_prereq) ||
-1. [Extract]()
+1. [Extract](#h_0.0_readme)
     + || [1.1-Load](#h_1.1_load) || [1.2-Tidy](#h_1.2_tidy) || [1.3-Summarise](#h_1.3_summarise) ||
-2. [Transform]()
-    + || 0.1 || 0.2 || 0.3 || 0.4
-3. [Load and analyse]()
-    + || 0.1 || 0.2 || 0.3 || 0.4
+2. [Transform](#h_2.0_transform)
+    + || [2.1-Reload data](#h_2.1_load) || [2.2-ISO encoding](#h_2.2_iso) || [2.3-Geocoding](#h_2.3_geocode) || 
+3. [Load and analyse](#h_3.0_analyse)
+    + || [3.1-Load and segment data frame](#h_3.1_analysis_prep) || [3.2-Define visualisation function](#h_3.2_geo_function) || [3.3-Visualise 1.0](#h_3.3_geo_vis) || [3.4-Visualise 2.0, clustering and outlier removal](#h_3.4_cluster) ||
+*  [Reference code section](#ref_code)
 
 
 ***
@@ -47,6 +49,8 @@ library(tidyverse) #number of packages for data manipulation, specifically want 
 library(sf) #creation of spatial objects
 library(mapview) #mapping package
 library(ggmap) #for google api access 
+library(RCurl) #to download ACLED content
+library(jsonlite) #to process ACLED downloaded info
 ```
 <br>
 Set parameters for the entire workflow
@@ -69,8 +73,8 @@ _**Note** on downloading from the Lowy Institute site, there may be incompatibil
 ***
 
 #### 1.1 Load .csv file and check data types {#h_1.1_load}
-
-```{r}
+[Back to index](#h_0.2_index)
+```{r echo = TRUE, results = 'hide'}
 ###Confirm working directory
 print(getwd())
 
@@ -79,6 +83,7 @@ lowy_raw_data <- read.csv("./Data/Raw_data/2019_LowyInstituteGlobalDiplomacyInde
 ```
 
 #### 1.2 Tidy up dataset {#h_1.2_tidy}
+[Back to index](#h_0.2_index)
 **Check for**: factors; rename columns; seperate out relevant columns <br>
 **Output**: <br>
 
@@ -134,6 +139,7 @@ head(lowy_posting,2)
 ```
 
 #### 1.3 Raw key information {#h_1.3_summarise}
+[Back to index](#h_0.2_index)
 Warning: an error may appear when running
 ```{r}
 ###report all unique values/entries
@@ -220,11 +226,14 @@ rm(list = ls()[grepl("per", ls())]) #per counting dataframes
 ***
 
 #### 2.1 Re-load {#h_2.1_load}
-```{r}
+[Back to index](#h_0.2_index)
+```{r echo = TRUE, results = 'hide'}
 lowy_data <- read_csv("./Data/Processing/Part_1_Out_Lowy_Posting.csv")
+#lowy_data <- head(lowy_data,5) #FOR SAMPLE WORK
 ```
 
 #### 2.2 ISO codes {#h_2.2_iso}
+[Back to index](#h_0.2_index)
 ```{r}
 ###Set up
 
@@ -307,6 +316,7 @@ head(lowy_data_iso,3)
 
 
 #### 2.3 Geo-coding {#h_2.3_geocode}
+[Back to index](#h_0.2_index)
 This section requires a google api key; you can set one up [here](https://console.cloud.google.com/){target="_blank"} through the google cloud platform
 
 ```{r}
@@ -316,6 +326,7 @@ register_google(key = "AIzaSyDNlUg_mclZ4kSJMDvbj_UVMHds8vkz2nE")
 Code to run the geocoding for each country column (`send_country` `post_country`), city `post_city` + `post country` (to avoid finding wrong city)
 
 **Part 1 cities and countries**
+[Back to index](#h_0.2_index)
 ```{r}
 ###========Preparation
 
@@ -328,12 +339,10 @@ lowy_data_iso$post_city_country = paste(
 ###geo-c - concatenated city and country names
 geo_city_country <- distinct(lowy_data_iso,post_city_country)
 geo_city_country_df <- as.data.frame(geo_city_country)
-#geo_city_country_df <- head(geo_city_country_df,4) #for sample work only
 
 ###geo-code - sending countries
 geo_send_country <- distinct(lowy_data_iso,send_country)
 geo_send_country_df <- as.data.frame(geo_send_country)
-#geo_send_country_df <- head(geo_send_country_df,4) #for sample work only
 
 ###========POST CITIES
 #if local file tag is set to TRUE, google api will not be used
@@ -354,7 +363,7 @@ if(use_local_files) {
   geo_send_country_df_dl <- read.csv("./Data/GoogleAPI/Geo_Send_Country_DL.csv")
 } else {
   print("Local file flag set to FALSE, calling google now!")
-  geo_city_country_df_dl <- mutate_geocode(geo_city_country_df, post_city_country)
+  geo_send_country_df_dl <- mutate_geocode(geo_send_country_df, send_country)
   #Save .csv file
   write.csv(geo_send_country_df_dl,"./Data/GoogleAPI/Geo_Send_Country_DL.csv", row.names = FALSE)
 }
@@ -386,6 +395,7 @@ head(lowy_data_geo)
 ```
 
 **Part 2 exact embassy locations**<br>
+[Back to index](#h_0.2_index)<br>
 Code to run the geocoding for exact embassy locations. Using combination of `send_country`+`post_country`+"Embassy"+ `post_city`
 ```{r}
 ###master dataframe with all data
@@ -412,7 +422,7 @@ if(use_local_files) {
   exact_post_lat = lat)
   
   #Save .csv file
-  write.csv(geo_send_country_df_dl,"./Data/GoogleAPI/lowy_data_geo_master.csv", row.names = FALSE)
+  write.csv(lowy_data_geo_master,"./Data/GoogleAPI/lowy_data_geo_master.csv", row.names = FALSE)
 }
 
 #Unload unnecessary data from global environment
@@ -432,7 +442,8 @@ rm(list = ls()) #purge all else (comment/uncomment as needed)
 ***
 
 #### 3.1 Load data and segmet usable part for analysis {#h_3.1_analysis_prep}
-```{r}
+[Back to index](#h_0.2_index)
+```{r echo = TRUE, results = 'hide'}
 ###Load data from section 2
 lowy_data_complete <- read_csv("./Data/GoogleAPI/lowy_data_geo_master.csv")
 
@@ -460,7 +471,7 @@ lowy_data_complete = select(lowy_data_complete,
                             everything())
 
 lowy_data_complete <- lowy_data_complete[order(lowy_data_complete$send_country),]
-head(lowy_data_complete)
+#head(lowy_data_complete)
 
 #Filter out NA values (around 44 values)
 geo_lowy_NA_values <- lowy_data_complete %>%
@@ -470,7 +481,9 @@ geo_lowy_NA_values <- lowy_data_complete %>%
 geo_lowy_no_NA <- lowy_data_complete %>%
   dplyr::select(everything()) %>%
   dplyr::filter(!is.na(exact_post_lon))
+```
 
+```{r}
 #Preview table
 report_full_length <-length(lowy_data_complete$send_country)
 report_na_length <- length(geo_lowy_NA_values$send_country)
@@ -478,11 +491,11 @@ report_non_na_length <- length(geo_lowy_no_NA$send_country)
 
 cat("There are,", report_full_length,"entries in the complete data frame.","\nFrom these,",report_na_length,"are NA/blank. (",report_na_length/report_full_length*100,"% )","\nIn total,",report_non_na_length,"entries have valid coordinates.","\nTotal coverage is:",report_non_na_length/report_full_length*100,"%")
 
-
 ```
 
 
 #### 3.2 Geo-coding analysis function {#h_3.2_geo_function}
+[Back to index](#h_0.2_index)
 Function to take in data frame, and a filter to visualise and return filtered dataframe for further analysis `f_exact_city_postings <- function(p_city_filter,p_df){}` see code [here](#ref_code) for further details
 ```{r include=FALSE}
 ###FUNCTION
@@ -496,7 +509,7 @@ f_exact_city_postings <- function(p_city_filter,p_df,p_colour = "red"){
     st_as_sf(sub_city_df,coords=c("post_city_lon","post_city_lat"),crs = 4326, remove = FALSE)
 
   sub_city_geo_sf <-
-    st_as_sf(sub_city_df,coords=c("exact_post_lon","latexact_post_lat"),crs = 4326,remove = FALSE)
+    st_as_sf(sub_city_df,coords=c("exact_post_lon","exact_post_lat"),crs = 4326,remove = FALSE)
 
   #map view options
   mapviewOptions(leafletWidth = 750,leafletHeight = 400)
@@ -507,26 +520,29 @@ f_exact_city_postings <- function(p_city_filter,p_df,p_colour = "red"){
       sub_city_sf,
       legend = FALSE,
       layer.name = "City coordinates",
-      alpha.regions = 0.4,
+      lwd = 0.5,
+      alpha.regions = 0.2,
       label = sub_city_df$post_city_country,
       cex = 10,
+      colour = "black",
+      col.regions = "orange",
       popup = leafpop::popupTable(subset(sub_city_sf, select = c(post_city_country)))
-      
-      #Exact lat longs
       )+ mapview(
       #spatial object
       sub_city_geo_sf,
       legend = FALSE,
-      layer.name = "Geocoded exact coordinates",
+      layer.name = "Exact embassy locations",
       label = sub_city_df$full_geo_query,
-      color = p_colour,
-      alpha.regions = 0.4,
+      color = "black",
+      alpha= 1,
+      lwd = "0.5",
+      alpha.regions = 0.5,
       col.regions = p_colour,
-      cex = 0.1,
-      popup = leafpop::popupTable(subset(sub_city_sf, select = c(send_country_iso,send_country,post_type,post_title,exact_post_lon,latexact_post_lat)))
+      cex = 6,
+      popup = leafpop::popupTable(subset(sub_city_sf, select = c(send_country_iso,send_country,post_type,post_title,exact_post_lon,exact_post_lat)))
       )
   
-  mapshot(exact_map, url = paste("/cloud/project/Data/MapFiles/",p_city_filter,"map.html",sep="_"))
+  mapshot(exact_map, url = paste("./Data/MapFiles/",p_city_filter,"map.html",sep="_"))
 
   #return dl table,map
   return_list <- list(df = sub_city_df,map = exact_map)
@@ -535,97 +551,244 @@ f_exact_city_postings <- function(p_city_filter,p_df,p_colour = "red"){
 ```
 
 #### 3.3 Visualise {#h_3.3_geo_vis}
+[Back to index](#h_0.2_index)
 Run function on array of cities of interest
 
 ```{r}
 ###run function
-f_out <- f_exact_city_postings(p_city_filter = "Tehran",p_df = geo_lowy_no_NA)
+f_out <- f_exact_city_postings(p_city_filter = "Algiers",p_df = geo_lowy_no_NA)
 f_out$map
+
 ```
 
 #### 3.4 Clustering {#h_3.4_cluster}
 Use function output from 3.3 to run DBSCAN spatial clustering analysis
+
 ```{r}
 
-f_exact_city_cluster <- function(p_city_filter,p_df,p_eps,p_k = 4){
-  #run original function
+#============== function start
+f_exact_city_cluster <- function(p_city_filter,p_df,p_eps,p_k = 4,p_outlier_remove = FALSE){
+  
+    #run original function
   f_out <- f_exact_city_postings(p_city_filter = p_city_filter,p_df = p_df)
   
+  f_out$df
+  
   #assign coordinates of filtered dataset to variable
-  db_coordinates <- f_out$df[14:15]
+  db_coordinates <- f_out$df[c("exact_post_lon","exact_post_lat")]*1000
   
   #boxplot
   db_coordinates_box <- boxplot(data=db_coordinates$exact_post_lon, x=db_coordinates$exact_post_lon, main="Boxplot for coordinate values", 
-   xlab="All post types", ylab="Count of posts",notch = TRUE) #[RETURN 1]
+   xlab="Posts", ylab="Longitude values",notch = TRUE) #[RETURN 1]
+  
+  db_coordinates <- db_coordinates/1000
+  db_coordinates_out <- db_coordinates_box$out/1000
+  
+  if(length(db_coordinates_out) == 0){
+    zero_outliers <- FALSE
+  }else{
+    zero_outliers <- TRUE
+  }
+  
+  #negation for filtering
+  `%nin%` <- Negate("%in%")
+
+  
+  #if outlier parameter set to true, they will be removed, else can keep going as is
+  if(p_outlier_remove & zero_outliers){
+    
+    #clustering objects
+    db_coordinates_keep <- db_coordinates%>% filter(exact_post_lon %nin% db_coordinates_out)
+    db_coordinates_out_cluster <- db_coordinates%>% filter(exact_post_lon %in% db_coordinates_out)
+    
+    #full dataframe without outliers
+    f_out_df <- f_out$df %>% filter(exact_post_lon %nin% db_coordinates_out)
+      
+    #outlier dataframe
+    f_out_outlier_df <- f_out$df %>% filter(exact_post_lon %in% db_coordinates_out)
+    
+    f_out_outlier_df_sf <- st_as_sf(f_out_outlier_df,
+                                      coords=c("exact_post_lon","exact_post_lat"),
+                                      crs = 4326,remove = FALSE)
+  }else{
+    db_coordinates_keep <- db_coordinates
+    f_out_df <- f_out$df
+  }
   
   #Indetify optimal eps 
-  kNNdist_df <- dbscan::kNNdist(db_coordinates, k = p_k)
-  db_kNN_plot <- dbscan::kNNdistplot(db_coordinates,k = p_k) #[RETURN 2]
+  kNNdist_df <- dbscan::kNNdist(db_coordinates_keep, k = p_k)
+  db_kNN_plot <- dbscan::kNNdistplot(db_coordinates_keep,k = p_k) #[RETURN 2]
 
   #now run the dbscan analysis
-  db <- fpc::dbscan(db_coordinates, eps = p_eps, MinPts = p_k)
+  db <- fpc::dbscan(db_coordinates_keep, eps = p_eps, MinPts = p_k)
   
   #now plot the results [RETURN 3]
-  db_plot <- plot(db, db_coordinates, main = "DBSCAN Output", frame = F)
+  db_plot <- plot(db, db_coordinates_keep, main = "DBSCAN Output", frame = F)
   
-  #add 1 to cluster to avoid 0 values as leaflet doesn't like to colour by 0 (zero) values
-  f_out$df$cluster <- db$cluster+1
-  dbscan_test_df <- f_out$df
+  #add 2 to cluster to avoid 0 values as leaflet doesn't like to colour by 0 (zero) values and colour '1' is black
+  db_coordinates_keep$cluster <- db$cluster+2
+  dbscan_test_df <- db_coordinates_keep
   
-  f_out_cluster <- f_exact_city_postings(p_city_filter = p_city_filter,p_df = dbscan_test_df,p_colour = dbscan_test_df$cluster)
-  f_out_cluster$map #[RETURN 4]
-  f_out_cluster$df #[RETURN 5]
+  dbscan_test_df
+  
+  f_out_cluster <- f_exact_city_postings(p_city_filter = p_city_filter,p_df = f_out_df,p_colour = dbscan_test_df$cluster)
+  
+  if(p_outlier_remove & zero_outliers){
+    f_out_cluster_map <- f_out_cluster$map + mapview(f_out_outlier_df_sf,
+      legend = FALSE,
+      layer.name = "Outliers",
+      label = f_out_outlier_df_sf$full_geo_query,
+      color = "yellow",
+      alpha.regions = 1,
+      col.regions = "yellow",
+      cex = 4)
+  }else{
+    #no outliers to plot
+    f_out_cluster_map <- f_out_cluster$map #[RETURN]
+  }
+  
+  f_out_cluster$df #[RETURN]
+  
+   mapshot(f_out_cluster_map, url = paste("./Data/MapFiles/",p_city_filter,"cluster_map.html",sep="_"))
+
+  #return list of relevant elements
+  return_list <- list(df_sub = f_out$df,map = f_out$map,box_plot = db_coordinates_box, k_plot = db_kNN_plot,f_cluster_map = f_out_cluster_map, f_cluster_df = f_out_cluster$df)
+  
+    return(return_list)
+  
+}
+#============== function end
+#f_exact_city_cluster(p_city_filter = "Tehran",p_df = geo_lowy_no_NA,p_eps = 0.015,p_k =4,p_outlier_remove = TRUE)
+#f_exact_city_cluster(p_city_filter = "London",p_df = geo_lowy_no_NA,p_eps = 0.005,p_k =4,p_outlier_remove = TRUE)
+
+#f_exact_city_cluster(p_city_filter = "Manila",p_df = geo_lowy_no_NA,p_eps = 0.003,p_k =4,p_outlier_remove = TRUE)
+#f_exact_city_cluster(p_city_filter = "Nairobi",p_df = geo_lowy_no_NA,p_eps = 0.010,p_k =4,p_outlier_remove = TRUE)
+#f_exact_city_cluster(p_city_filter = "Singapore",p_df = geo_lowy_no_NA,p_eps = 0.005,p_k =4,p_outlier_remove = TRUE)
+
+sample_anlaysis <- f_exact_city_cluster(p_city_filter = "Algiers",p_df = geo_lowy_no_NA,p_eps = 0.002,p_k =4,p_outlier_remove = TRUE)
+sample_anlaysis$df_sub
+```
+
+
+
+***
+
+|| [0.0|READ ME](#h_0.0_readme) || [1.0|EXTRACT](#h_1.0_extract) || [2.0|TRANSFORM](#h_2.0_transform) || [**3.0|LOAD and ANALYSE**](#h_3.0_analyse) || [**4.0|ACLED data]() || <br>
+
+### 4.0 ACLED data {#h_4.0_acled}
+> **Purpose of section**: add data layer to output from function in 3.4 <br>
+> **Inputs**: `f_exact_city_cluster()` (outputs of function call in 3.4)<br>
+> **Outputs**: maps and visuals
+
+***
+
+#### 4.1 Set up ACLED API {#h_4.1_acled_api}
+[Back to index](#h_0.2_index)
+
+For details on how to use ACLED API please see documentation [here](){target="_blank"}
+
+API structure for JSON output
+Full url call: `https://api.acleddata.com/acled/read?terms=accept&country=Iran&year=2019&admin1=Tehran`
+URL base: `https://api.acleddata.com/acled/read?terms=accept` terms=accept is required for output to be provided
+
+after this, filters and criteria can be concatenated useing `&`
+
+In this case, country iso `&iso=364`, year `&year=2019`, admin1 `admin1=Tehran` for city
+
+```{r}
+#Set analysis parameters
+
+
+#define function, parameters same as those for clustering function in 3.4
+f_acled_merge <- function(p_city_filter,p_df,p_eps,p_k,p_outlier_remove = TRUE,p_acled_year = FALSE,p_acled_city = TRUE){
+  
+  #function from 3.4
+  f_exact_output <- f_exact_city_cluster(p_city_filter = p_city_filter,
+                       p_df = p_df,p_eps = p_eps,
+                       p_k = p_k,
+                       p_outlier_remove = p_outlier_remove)
+  
+  #relevant outputs from f_exact_city_cluster() are: dataset, cluster analysis stats and map to add to.
+
+  ###ISO
+  distinct_country_iso <- distinct(f_exact_output$f_cluster_df,post_country_iso_num)
+  #Kenya #364 IRAN
+  #distinct_country_iso <- 368 
+  distinct_country_iso_call <- paste("&iso=",distinct_country_iso,sep="")
+  ###YEAR
+  if(p_acled_year){
+    acled_year <- p_acled_year 
+    acled_year_call <- paste("&year=",acled_year,sep="")
+  }else{
+    acled_year_call <- ""
+  }
+  ###CITY
+  if(p_acled_city){
+    city_call <- paste("&admin1=",p_city_filter,sep="")
+  }else{
+    city_call <- ""
+  }
+  
+  ###API
+  api_base <-"https://api.acleddata.com/acled/read?terms=accept"
+  
+  url_call <- paste(api_base,distinct_country_iso_call,acled_year_call,city_call,sep="")
+  acled_data <- getURL(url_call)
+  acled_df <- fromJSON(acled_data)$data #get data right away
+  acled_df <- type_convert(acled_df)
+  acled_df$point_size <- acled_df$fatalities+6
+  acled_df_sf <- st_as_sf(acled_df,
+                                      coords=c("longitude","latitude"),
+                                      crs = 4326,remove = FALSE)
+  
+  
+  f_acled_map <- f_exact_output$f_cluster_map + mapview(acled_df_sf,
+      legend = TRUE,
+      layer.name = "Incidents (by type)",
+      label = acled_df_sf$event_type,
+      lwd = 0.5,
+      color = "red",
+      alpha.regions = 0.5,
+      #col.regions = acled_df_sf$event_type,
+      col.regions = "white",
+      #zcol = "event_type",
+      cex = "point_size",
+      popup = leafpop::popupTable(subset(acled_df_sf, select = c(event_date,event_type,sub_event_type,fatalities,source_scale,source)))
+      )
+    
+  mapshot(f_acled_map, url = paste("./Data/MapFiles/",p_city_filter,"ACLED_map.html",sep="_"))
   
   #return list of relevant elements
-  return_list <- list(df_sub = f_out$df,map = f_out$map,box_plot = db_coordinates_box, k_plot = db_kNN_plot,f_cluster_map = f_out_cluster$map, f_cluster_df = f_out_cluster$df)
-  return(return_list)
+  return_list <- list(f_data = f_exact_output$f_cluster_df,
+                      f_map = f_acled_map,
+                      f_k_plot = f_exact_output$k_plot,
+                      f_acled_data = acled_df_sf)
+  
+    return(return_list)
 }
 
-f_exact_city_cluster(p_city_filter = "London",p_df = geo_lowy_no_NA,p_eps = 0.02,p_k =4)
+```
 
 
-f_exact_city_cluster(p_city_filter = "Tehran",p_df = dbscan_test_df,p_colour = dbscan_test_df$cluster)
+```{r}
 
-#extract coordinate columns
-db_coordinates <- f_out$df[14:15]
-#db_coordinates <- db_coordinates[order(db_coordinates$exact_post_lon),]
+f_acled_results <- f_acled_merge(
+  #standard parameters
+  p_city_filter = "Manila",p_df = geo_lowy_no_NA,p_eps = 0.015,p_k =4,p_outlier_remove = TRUE,
+  #acled parameters
+  p_acled_year = 2019,
+  p_acled_city = FALSE)
 
-#boxplot to spot geographical outliers
-db_coordinates_box <- boxplot(data=db_coordinates$exact_post_lon, x=db_coordinates$exact_post_lon, main="Boxplot for coordinate values", 
-   xlab="All post types", ylab="Count of posts",notch = TRUE)
-
-db_coordinates_box$out
-
-#Remove geographical outliers
-#db_coordinates <- db_coordinates[-(1:5),]
-
-#Indetify optimal eps
-kNNdist_df <- dbscan::kNNdist(db_coordinates, k = 2)
-dbscan::kNNdistplot(db_coordinates,k = 2)
-
-#now run the dbscan analysis
-db <- fpc::dbscan(db_coordinates, eps = 0.017, MinPts = 2)
-#now plot the results
-plot(db, db_coordinates, main = "DBSCAN Output", frame = F)
-
-
-
-
-f_out$df$cluster <- db$cluster+1
-dbscan_test_df <- f_out$df
-
-dbscan_test_df
-
-f_out <- f_exact_city_postings(p_city_filter = "Tehran",p_df = dbscan_test_df,p_colour = dbscan_test_df$cluster)
-f_out$map
-
-
+f_acled_results$f_map
 ```
 
 
 
 
+***
+
 #### REFERENCE CODE FUNCTIONS {#ref_code}
+[Back to index](#h_0.2_index)
 
 **`f_exact_city_postings()`**: 
 
@@ -673,6 +836,36 @@ f_exact_city_postings <- function(p_city_filter,p_df){
   return(return_list)
 }
 ```
+Calculate global population and global economy proportions for this dataset.
+```{r}
+lowy_meta_df <- read_csv("./Data/Processing/Part_1_Out_Lowy_Meta.csv")
 
+#ECONOMY
+economy_summary <- distinct(lowy_meta_df,send_country,meta_gdp_usd_billions)
+economy_summary_sum <- sum(economy_summary$meta_gdp_usd_billions)
+economy_2019 <- 85.91*1000
+economy_coverage <- economy_summary_sum/economy_2019
+
+###POPULATION
+people_summary <- distinct(lowy_meta_df,send_country,meta_population_millions)
+people_summary_sum <- sum(people_summary$meta_population_millions)
+people_2019 <- 7.594*1000
+people_coverage <- people_summary_sum/people_2019
+
+cat("Coverage of the world economy is:",economy_coverage*100,"%","\nCoverage of global population is:",people_coverage*100,"%")
+
+
+#economy from: https://data.worldbank.org/indicator/ny.gdp.mktp.cd
+#people from: https://data.worldbank.org/indicator/sp.pop.totl 
+#85.91 GDP in current dollars in thousands of billions for 2018
+#7.594thousand million population in the world in 2018
+```
+
+
+
+
+```{r echo=FALSE}
+print("Succesfully ran all code, yay :)")
+```
 
 
