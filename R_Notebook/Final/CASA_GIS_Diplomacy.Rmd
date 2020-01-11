@@ -34,9 +34,9 @@ This notebook outlines the _process_ and _code_ outputs associated with a projec
 *  [Reference code section](#ref_code)
 
 
-##### Process overview
+##### Process overview image{#h_process_image}
 
-#![Workflow process](.Images/CASA_GIS_diplomacy_detailed.png)
+![](/cloud/project/R_Notebook/Final/Images/CASA_GIS_diplomacy_detailed.png)
 
 ***
 
