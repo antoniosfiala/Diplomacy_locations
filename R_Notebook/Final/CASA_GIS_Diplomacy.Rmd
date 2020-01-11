@@ -34,6 +34,10 @@ This notebook outlines the _process_ and _code_ outputs associated with a projec
 *  [Reference code section](#ref_code)
 
 
+##### Process overview
+
+#![Workflow process](.Images/CASA_GIS_diplomacy_detailed.png)
+
 ***
 
 #### 0.3 Pre-requisites and set up {#h_0.3_prereq}
