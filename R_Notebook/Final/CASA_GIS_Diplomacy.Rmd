@@ -776,7 +776,7 @@ f_acled_merge <- function(p_city_filter,p_df,p_eps,p_k,p_outlier_remove = TRUE,p
 ```
 
 
-```{r}
+```{r echo= TRUE, results= "hide"}
 
 f_acled_results <- f_acled_merge(
   #standard parameters
