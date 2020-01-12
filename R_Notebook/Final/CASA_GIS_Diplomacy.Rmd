@@ -162,7 +162,7 @@ lowy_count_per_send_country <- lowy_posting %>%
   arrange(desc(count))
 
 per_country_count <- lowy_count_per_send_country$count
-
+par(family = "Times New Roman")
 per_country_box <- boxplot(data=per_country_count, x=per_country_count, main="Diplomatic post count by sending country", 
    xlab="All post types", ylab="Count of posts",notch = TRUE)
 
@@ -201,11 +201,11 @@ per_post_country_count <- lowy_count_per_post_country$count
 per_post_country_box <- boxplot(data=per_post_country_count, x=per_post_country_count, main="Diplomatic post count by post country", 
    xlab="All post types", ylab="Count of posts",notch = TRUE)
 cat("Per post country count summary",
-    "\nMin value:",per_post_city_box$stats[1,1],
-    "\n25th percentile:",per_post_city_box$stats[2,1],
-    "\nMedian value:",per_post_city_box$stats[3,1],
-    "\n75th percentile:",per_post_city_box$stats[4,1],
-    "\nMax value:",per_post_city_box$stats[5,1]
+    "\nMin value:",per_post_country_box$stats[1,1],
+    "\n25th percentile:",per_post_country_box$stats[2,1],
+    "\nMedian value:",per_post_country_box$stats[3,1],
+    "\n75th percentile:",per_post_country_box$stats[4,1],
+    "\nMax value:",per_post_country_box$stats[5,1]
     )
 ```
 
@@ -395,7 +395,7 @@ lowy_data_geo <- lowy_data_geo %>% rename(
   post_city_lon =lon,
   post_city_lat = lat)
 
-head(lowy_data_geo)
+head(lowy_data_geo,3)
 ```
 
 **Part 2 exact embassy locations**<br>
@@ -516,7 +516,7 @@ f_exact_city_postings <- function(p_city_filter,p_df,p_colour = "red"){
     st_as_sf(sub_city_df,coords=c("exact_post_lon","exact_post_lat"),crs = 4326,remove = FALSE)
 
   #map view options
-  mapviewOptions(leafletWidth = 750,leafletHeight = 400)
+  #mapviewOptions(leafletWidth = 750,leafletHeight = 400)
   
   #City lat longs
   exact_map <- mapview(
@@ -546,12 +546,14 @@ f_exact_city_postings <- function(p_city_filter,p_df,p_colour = "red"){
       popup = leafpop::popupTable(subset(sub_city_sf, select = c(send_country_iso,send_country,post_type,post_title,exact_post_lon,exact_post_lat)))
       )
   
-  mapshot(exact_map, url = paste("./Data/MapFiles/",p_city_filter,"map.html",sep="_"))
+  mapshot(exact_map, url = paste("/cloud/project/R_Notebook/Final/Data/MapFiles/",p_city_filter,"map.html",sep="_"))
 
   #return dl table,map
   return_list <- list(df = sub_city_df,map = exact_map)
   return(return_list)
 }
+
+getwd()
 ```
 
 #### 3.3 Visualise {#h_3.3_geo_vis}
@@ -560,7 +562,7 @@ Run function on array of cities of interest
 
 ```{r}
 ###run function
-f_out <- f_exact_city_postings(p_city_filter = "Algiers",p_df = geo_lowy_no_NA)
+f_out <- f_exact_city_postings(p_city_filter = "Tehran",p_df = geo_lowy_no_NA)
 f_out$map
 
 ```
@@ -629,8 +631,8 @@ f_exact_city_cluster <- function(p_city_filter,p_df,p_eps,p_k = 4,p_outlier_remo
   #now plot the results [RETURN 3]
   db_plot <- plot(db, db_coordinates_keep, main = "DBSCAN Output", frame = F)
   
-  #add 2 to cluster to avoid 0 values as leaflet doesn't like to colour by 0 (zero) values and colour '1' is black
-  db_coordinates_keep$cluster <- db$cluster+2
+  #you can add '2' to cluster to avoid 0 values as leaflet doesn't like to colour by 0 (zero) values and colour '1' is black
+  db_coordinates_keep$cluster <- db$cluster+1 #+2 #not used
   dbscan_test_df <- db_coordinates_keep
   
   dbscan_test_df
@@ -653,7 +655,7 @@ f_exact_city_cluster <- function(p_city_filter,p_df,p_eps,p_k = 4,p_outlier_remo
   
   f_out_cluster$df #[RETURN]
   
-   mapshot(f_out_cluster_map, url = paste("./Data/MapFiles/",p_city_filter,"cluster_map.html",sep="_"))
+   mapshot(f_out_cluster_map, url = paste("/cloud/project/R_Notebook/Final/Data/MapFiles/",p_city_filter,"cluster_map.html",sep="_"))
 
   #return list of relevant elements
   return_list <- list(df_sub = f_out$df,map = f_out$map,box_plot = db_coordinates_box, k_plot = db_kNN_plot,f_cluster_map = f_out_cluster_map, f_cluster_df = f_out_cluster$df)
@@ -760,7 +762,7 @@ f_acled_merge <- function(p_city_filter,p_df,p_eps,p_k,p_outlier_remove = TRUE,p
       popup = leafpop::popupTable(subset(acled_df_sf, select = c(event_date,event_type,sub_event_type,fatalities,source_scale,source)))
       )
     
-  mapshot(f_acled_map, url = paste("./Data/MapFiles/",p_city_filter,"ACLED_map.html",sep="_"))
+  mapshot(f_acled_map, url = paste("/cloud/project/R_Notebook/Final/Data/MapFiles/",p_city_filter,"ACLED_map.html",sep="_"))
   
   #return list of relevant elements
   return_list <- list(f_data = f_exact_output$f_cluster_df,
@@ -786,6 +788,39 @@ f_acled_results <- f_acled_merge(
 f_acled_results$f_map
 ```
 
+### 5.0 Test different cities {#h_4.2_analysis}
+[Back to index](#h_0.2_index)
+
+In this section, different cities are examined for qualitative assessment in the final assessment.
+#### 5.1 CAIRO
+```{r}
+###CAIRO
+
+cairo_results <- f_acled_merge(
+  #standard parameters
+  p_city_filter = "Cairo",p_df = geo_lowy_no_NA,p_eps = 0.003,p_k =4,p_outlier_remove = TRUE,
+  #acled parameters
+  p_acled_year = 2019,
+  p_acled_city = TRUE)
+
+cairo_results$f_map
+
+```
+
+#### 5.2 ANKARA
+```{r}
+###ANKARA
+
+ankara_results <- f_acled_merge(
+  #standard parameters
+  p_city_filter = "Ankara",p_df = geo_lowy_no_NA,p_eps = 0.003,p_k =4,p_outlier_remove = TRUE,
+  #acled parameters
+  p_acled_year = 2019,
+  p_acled_city = TRUE)
+
+ankara_results$f_map
+
+```
 
 
 
