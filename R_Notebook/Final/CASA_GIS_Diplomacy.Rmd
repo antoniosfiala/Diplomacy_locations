@@ -6,9 +6,9 @@ output:
     theme: united
 ---
 
+### 0.0 Read me {#h_0.0_readme}
 || [**0.0|READ ME**](#h_0.0_readme) || [1.0|EXTRACT](#h_1.0_extract) || [2.0|TRANSFORM](#h_2.0_transform) || [3.0|LOAD and ANALYSE](#h_3.0_analyse) || [4.0|ACLED data](#h_4.0_acled) || [5.0|ACLED data](#h_5.0_cases) ||<br>
 
-### 0.0 Read me {#h_0.0_readme}
 > **Purpose of section**| brief outline of document, its content and prerequisites<br>
 > **Inputs** | none<br>
 > **Outputs** | none
@@ -73,9 +73,9 @@ use_local_files <- TRUE
 
 ***
 
+### 1.0 Extract GDI dataset {#h_1.0_extract}
 || [0.0|READ ME](#h_0.0_readme) || [**1.0|EXTRACT**](#h_1.0_extract) || [2.0|TRANSFORM](#h_2.0_transform) || [3.0|LOAD and ANALYSE](#h_3.0_analyse) || [4.0|ACLED data](#h_4.0_acled) || [5.0|ACLED cases](#h_5.0_cases) ||<br>
 
-### 1.0 Extract GDI dataset {#h_1.0_extract}
 > **Purpose of section** | load GDI dataset from Lowy Institute site and summarise <br>
 > **Inputs** | GDI dataset available [here](https://globaldiplomacyindex.lowyinstitute.org/about.html#){target="_blank"} <br>
 > **Outputs**| Renamed and separated .csv files
@@ -231,9 +231,10 @@ rm(list = ls()[grepl("per", ls())]) #per counting dataframes
 
 ***
 
+### 2.0 Transform GDI data {#h_2.0_transform}
 || [0.0|READ ME](#h_0.0_readme) || [1.0|EXTRACT](#h_1.0_extract) || [**2.0|TRANSFORM**](#h_2.0_transform) || [3.0|LOAD and ANALYSE](#h_3.0_analyse) || [4.0|ACLED data](#h_4.0_acled) || [5.0|ACLED data](#h_5.0_cases) ||<br>
 
-### 2.0 Transform GDI data {#h_2.0_transform}
+
 > **Purpose of section** | Load,.csv files; add country iso codes to main data frame; and geocode send country+post city+post+country+exact embassy location with Google API <br>
 > **Inputs** | `Part_1_Out_Lowy_Posting.csv` from end of part 1<br>
 > **Outputs** | `lowy_data_iso` master geocoded table 
@@ -465,9 +466,9 @@ rm(list = ls()) #purge all else (comment/uncomment as needed)
 
 ***
 
+### 3.0 Load and analyse Lowy Institute data {#h_3.0_analyse}
 || [0.0|READ ME](#h_0.0_readme) || [1.0|EXTRACT](#h_1.0_extract) || [2.0|TRANSFORM](#h_2.0_transform) || [**3.0|LOAD and ANALYSE**](#h_3.0_analyse) || [4.0|ACLED data](#h_4.0_acled) || [5.0|ACLED data](#h_5.0_cases) ||<br>
 
-### 3.0 Load and analyse Lowy Institute data {#h_3.0_analyse}
 > **Purpose of section** | visualise coordinates; and run clustering analysis<br>
 > **Inputs** | `lowy_data_geo_master` (final output of part 2)<br>
 > **Outputs** | maps and visuals
@@ -711,9 +712,9 @@ sample_anlaysis$f_cluster_map
 
 ***
 
+### 4.0 ACLED data {#h_4.0_acled}
 || [0.0|READ ME](#h_0.0_readme) || [1.0|EXTRACT](#h_1.0_extract) || [2.0|TRANSFORM](#h_2.0_transform) || [3.0|LOAD and ANALYSE](#h_3.0_analyse) || [**4.0|ACLED data**](#h_4.0_acled) || [5.0|ACLED cases](#h_5.0_cases) ||<br>
 
-### 4.0 ACLED data {#h_4.0_acled}
 > **Purpose of section** | add data layer to output from function in 3.4 <br>
 > **Inputs** | `f_exact_city_cluster()` (outputs of function call in 3.4)<br>
 > **Outputs** | maps and visuals
@@ -817,9 +818,9 @@ f_acled_results$f_map
 
 ***
 
+### 5.0 ACLED cases {#h_5.0_cases}
 || [0.0|READ ME](#h_0.0_readme) || [1.0|EXTRACT](#h_1.0_extract) || [2.0|TRANSFORM](#h_2.0_transform) || [3.0|LOAD and ANALYSE](#h_3.0_analyse) || [4.0|ACLED data](#h_4.0_acled) || [**5.0|ACLED cases**](#h_5.0_cases) ||<br>
 
-### 5.0 ACLED cases {#h_5.0_cases}
 > **Purpose of section**: run two case studies using function from section 4 <br>
 > **Inputs**: `f_acled_merge()` <br>
 > **Outputs**: maps and plots to assess clustering
