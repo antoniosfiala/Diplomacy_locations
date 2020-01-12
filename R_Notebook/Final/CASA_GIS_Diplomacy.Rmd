@@ -1,5 +1,5 @@
 ---
-title: "Analysing the frontlines of diplomacy: accompanying code"
+title: "Analysing the frontline of diplomacy: accompanying code"
 output: 
   html_notebook:
     code_folding: hide
