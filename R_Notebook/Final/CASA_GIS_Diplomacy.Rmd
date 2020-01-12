@@ -1,21 +1,24 @@
 ---
-title: "The case for more GIS in front-line diplomacy"
-output: html_notebook
+title: "Analysing the frontlines of diplomacy: accompanying code"
+output: 
+  html_notebook:
+    code_folding: hide
+    theme: united
 ---
 
-|| [**0.0|READ ME**](#h_0.0_readme) || [1.0|EXTRACT](#h_0.0_readme) || [2.0|TRANSFORM](#h_2.0_transform) || [3.0|LOAD and ANALYSE](#h_3.0_analyse) || <br>
+|| [**0.0|READ ME**](#h_0.0_readme) || [1.0|EXTRACT](#h_1.0_extract) || [2.0|TRANSFORM](#h_2.0_transform) || [3.0|LOAD and ANALYSE](#h_3.0_analyse) || [4.0|ACLED data](#h_4.0_acled) || [5.0|ACLED data](#h_5.0_cases) ||<br>
 
 ### 0.0 Read me {#h_0.0_readme}
-> **Purpose of section**: brief outline of document, its content and pre-requisits<br>
-> **Inputs**: none<br>
-> **Outputs**: none
+> **Purpose of section**| brief outline of document, its content and prerequisites<br>
+> **Inputs** | none<br>
+> **Outputs** | none
 
 ***
 
 #### 0.1 Outline of document {#h_0.1_outline}
-This notebook outlines the _process_ and _code_ outputs associated with a project on the role of GIS in international relations and diplomacy academia and practice.
+This notebook outlines the process and code outputs associated with the project Analysing the frontlines of diplomacy: the case for unleashing GIS (A proof of concept algorithm supplemented with i| indicative clustering analysis of diplomatic post locations and ii| conflict events within cities)
 
-**Final submission** and analysis can be found [here]() `13.01.2020`<br>
+**Final submission** can be found [here]() `13.01.2020`<br>
 
 
 ***
@@ -31,11 +34,16 @@ This notebook outlines the _process_ and _code_ outputs associated with a projec
     + || [2.1-Reload data](#h_2.1_load) || [2.2-ISO encoding](#h_2.2_iso) || [2.3-Geocoding](#h_2.3_geocode) || 
 3. [Load and analyse](#h_3.0_analyse)
     + || [3.1-Load and segment data frame](#h_3.1_analysis_prep) || [3.2-Define visualisation function](#h_3.2_geo_function) || [3.3-Visualise 1.0](#h_3.3_geo_vis) || [3.4-Visualise 2.0, clustering and outlier removal](#h_3.4_cluster) ||
+4. [ACLED data](#h_4.0_acled)
+    + || [4.1-ACLED api function](#h_4.1_acled_api) || [4.2-ACLED function output](#h_4.2_acled_out)
+5. [Case studies](#h_5.0_cases)
+    + || [5.1-Case 1 - Cairo](#h_5.1_case) || [5.2-Case 2 - Ankara](#h_5.2_case)
+
 *  [Reference code section](#ref_code)
 
+Overview of the steps of this workflow in the chart below (Appendix G.2 in the submitted work)<br>
 
-##### Process overview image{#h_process_image}
-
+#### Appendix G.2 | complete process flow
 ![](/cloud/project/R_Notebook/Final/Images/CASA_GIS_diplomacy_detailed.png)
 
 ***
@@ -44,9 +52,9 @@ This notebook outlines the _process_ and _code_ outputs associated with a projec
 
 In order for the code below to work, please ensure you have installed and loaded the relevant packages.
 
-```{r}
+```{r echo = TRUE, results = 'hide'}
 #Installing packages (uncomment as required)
-#install.packages(c("countrycode","tidyverse","sf","mapview","ggmap"))
+#install.packages(c("countrycode","tidyverse","sf","mapview","ggmap","RCurl","jsonlite","RCurl","jsonlite"))
 
 library(countrycode) #iso tagging of countries
 library(tidyverse) #number of packages for data manipulation, specifically want readr, dplyr, tibble
@@ -57,45 +65,45 @@ library(RCurl) #to download ACLED content
 library(jsonlite) #to process ACLED downloaded info
 ```
 <br>
-Set parameters for the entire workflow
+Setting to use local files or refresh geocoding via API calls.
 ```{r}
-#Set this to TRUE or FALSE to determine whether to use local, pre-loaded files or refresh via relevant API, i.e. (Google/ACLED) connections.
+#Set this to TRUE or FALSE to determine whether to use local, pre-loaded files or refresh via relevant API, i.e. (Google) connections.
 use_local_files <- TRUE
 ```
 
 ***
 
-|| [0.0|READ ME](#h_0.0_readme) || [**1.0|EXTRACT**](#h_1.0_extract) || [2.0|TRANSFORM](#h_2.0_transform) || [3.0|LOAD and ANALYSE](#h_3.0_analyse) || <br>
+|| [0.0|READ ME](#h_0.0_readme) || [**1.0|EXTRACT**](#h_1.0_extract) || [2.0|TRANSFORM](#h_2.0_transform) || [3.0|LOAD and ANALYSE](#h_3.0_analyse) || [4.0|ACLED data](#h_4.0_acled) || [5.0|ACLED cases](#h_5.0_cases) ||<br>
 
-### 1.0 Extract Lowy Institute data {#h_1.0_extract}
-> **Purpose of section**: <br>
-> **Inputs**: Local Lowy Institute dataset available [here](https://globaldiplomacyindex.lowyinstitute.org/about.html#){target="_blank"} <br>
-> **Outputs**: Renamed and separated .csv filess
+### 1.0 Extract GDI dataset {#h_1.0_extract}
+> **Purpose of section** | load GDI dataset from Lowy Institute site and summarise <br>
+> **Inputs** | GDI dataset available [here](https://globaldiplomacyindex.lowyinstitute.org/about.html#){target="_blank"} <br>
+> **Outputs**| Renamed and separated .csv files
 
-_**Note** on downloading from the Lowy Institute site, there may be incompatibility with downloads in Safari, chrome is recommended, have not tested other browsers._
+_**Note** | downloading from the Lowy Institute site, there may be incompatibility with downloads in Safari, chrome is recommended, have not tested other browsers._
 
 ***
 
 #### 1.1 Load .csv file and check data types {#h_1.1_load}
 [Back to index](#h_0.2_index)
-```{r echo = TRUE, results = 'hide'}
-###Confirm working directory
-print(getwd())
 
+Load 2019 GDI dataset
+```{r results = 'hide'}
 ###open latest csv document based on relative path
 lowy_raw_data <- read.csv("./Data/Raw_data/2019_LowyInstituteGlobalDiplomacyIndex_FullDataset.csv")
 ```
 
 #### 1.2 Tidy up dataset {#h_1.2_tidy}
-[Back to index](#h_0.2_index)
-**Check for**: factors; rename columns; seperate out relevant columns <br>
-**Output**: <br>
+[Back to index](#h_0.2_index)<br>
+**Check for**| factors; rename columns; seperate out relevant columns <br>
+**Output**| <br>
 
 a. renamed data frame `lowy_renamed`
 b. other meta data `lowy_meta`
 c. ranking data `lowy_rank`
 d. **posting data** `lowy_posting` **<===** this is the relevant one for the rest of the work
 
+Tidy dataset, see preview for table.
 ```{r}
 ###check for factor columns and change them to character columns
 #more of a pre-emptive measure
@@ -139,13 +147,16 @@ write.csv(lowy_rank,"./Data/Processing/Part_1_Out_Lowy_Rank.csv", row.names = FA
 write.csv(lowy_meta,"./Data/Processing/Part_1_Out_Lowy_Meta.csv", row.names = FALSE)
 
 #quick preview of data frame to work on
-head(lowy_posting,2)
+head(lowy_posting,3)
 ```
 
 #### 1.3 Raw key information {#h_1.3_summarise}
 [Back to index](#h_0.2_index)
-Warning: an error may appear when running
+
 ```{r}
+#Length of dataframe:
+cat("Lowy Institute's GDI dataset has",length(lowy_posting[[1]]),"entries.")
+
 ###report all unique values/entries
 #Summarise all unique values in crude print out
 for(column in colnames(lowy_posting)){
@@ -220,20 +231,19 @@ rm(list = ls()[grepl("per", ls())]) #per counting dataframes
 
 ***
 
-|| [0.0|READ ME](#h_0.0_readme) || [1.0|EXTRACT](#h_1.0_extract) || [**2.0|TRANSFORM**](#h_2.0_transform) || [3.0|LOAD and ANALYSE](#h_3.0_analyse) || <br>
+|| [0.0|READ ME](#h_0.0_readme) || [1.0|EXTRACT](#h_1.0_extract) || [**2.0|TRANSFORM**](#h_2.0_transform) || [3.0|LOAD and ANALYSE](#h_3.0_analyse) || [4.0|ACLED data](#h_4.0_acled) || [5.0|ACLED data](#h_5.0_cases) ||<br>
 
-### 2.0 Transform Lowy Institute data {#h_2.0_transform}
-> **Purpose of section**: Load,.csv files; add country iso codes to main data frame; and geocode send country+post city+post+country+exact embassy location with Google API <br>
-> **Inputs**: `Part_1_Out_Lowy_Posting.csv` from end of part 1<br>
-> **Outputs**: `to be named` master geocoded table 
+### 2.0 Transform GDI data {#h_2.0_transform}
+> **Purpose of section** | Load,.csv files; add country iso codes to main data frame; and geocode send country+post city+post+country+exact embassy location with Google API <br>
+> **Inputs** | `Part_1_Out_Lowy_Posting.csv` from end of part 1<br>
+> **Outputs** | `lowy_data_iso` master geocoded table 
 
 ***
 
 #### 2.1 Re-load {#h_2.1_load}
 [Back to index](#h_0.2_index)
-```{r echo = TRUE, results = 'hide'}
+```{r results = 'hide'}
 lowy_data <- read_csv("./Data/Processing/Part_1_Out_Lowy_Posting.csv")
-#lowy_data <- head(lowy_data,5) #FOR SAMPLE WORK
 ```
 
 #### 2.2 ISO codes {#h_2.2_iso}
@@ -313,24 +323,28 @@ lowy_data_iso$send_country_iso_num = iso_list_send_country_num
 
 lowy_data_iso$post_country_iso = iso_list_post_country
 lowy_data_iso$post_country_iso_num = iso_list_post_country_num
+```
 
+Click arrows to see all iso columns in data frame
+```{r}
 ###preview data frame
 head(lowy_data_iso,3)
 ```
 
 
 #### 2.3 Geo-coding {#h_2.3_geocode}
-[Back to index](#h_0.2_index)
+[Back to index](#h_0.2_index)<br>
 This section requires a google api key; you can set one up [here](https://console.cloud.google.com/){target="_blank"} through the google cloud platform
 
 ```{r}
-register_google(key = "AIzaSyDNlUg_mclZ4kSJMDvbj_UVMHds8vkz2nE")
+register_google(key = "")
 ```
 
-Code to run the geocoding for each country column (`send_country` `post_country`), city `post_city` + `post country` (to avoid finding wrong city)
+Code to run the geocoding for each country column (`send_country` `post_country`), city `post_city` + `post country` (to avoid finding wrong city)<br>
 
-**Part 1 cities and countries**
-[Back to index](#h_0.2_index)
+**Part 1 cities and countries**<br>
+[Back to index](#h_0.2_index)<br>
+Generate geocoding queries:
 ```{r}
 ###========Preparation
 
@@ -343,39 +357,50 @@ lowy_data_iso$post_city_country = paste(
 ###geo-c - concatenated city and country names
 geo_city_country <- distinct(lowy_data_iso,post_city_country)
 geo_city_country_df <- as.data.frame(geo_city_country)
+#geo_city_country_df <- head(geo_city_country_df,4) #for sample work only
 
 ###geo-code - sending countries
 geo_send_country <- distinct(lowy_data_iso,send_country)
 geo_send_country_df <- as.data.frame(geo_send_country)
+```
+
+Cities hosting diplomatic outposts geocoded
+```{r}
 
 ###========POST CITIES
 #if local file tag is set to TRUE, google api will not be used
 if(use_local_files) {
-  print("Local file flag set to TRUE, using local files")
+  #print("Local file flag set to TRUE, using local files")
   geo_city_country_df_dl <- read.csv("./Data/GoogleAPI/Geo_City_Country_DL.csv")
 } else {
-  print("Local file flag set to FALSE, calling google now!")
+  #print("Local file flag set to FALSE, calling google now!")
   geo_city_country_df_dl <- mutate_geocode(geo_city_country_df, post_city_country)
   #Save .csv file
   write.csv(geo_city_country_df_dl,"./Data/GoogleAPI/Geo_City_Country_DL.csv", row.names = FALSE)
 }
+head(geo_city_country_df_dl,3)
+```
+
+Sending countries geocoded
+```{r}
 
 ###========SEND COUNTRIES
 #if local file tag is set to TRUE, google api will not be used
 if(use_local_files) {
-  print("Local file flag set to TRUE, using local files")
+  #print("Local file flag set to TRUE, using local files")
   geo_send_country_df_dl <- read.csv("./Data/GoogleAPI/Geo_Send_Country_DL.csv")
 } else {
-  print("Local file flag set to FALSE, calling google now!")
-  geo_send_country_df_dl <- mutate_geocode(geo_send_country_df, send_country)
+  #print("Local file flag set to FALSE, calling google now!")
+  geo_city_country_df_dl <- mutate_geocode(geo_city_country_df, post_city_country)
   #Save .csv file
   write.csv(geo_send_country_df_dl,"./Data/GoogleAPI/Geo_Send_Country_DL.csv", row.names = FALSE)
 }
 
-###========VIEW DATAFRAMES
-head(geo_city_country_df_dl,3)
 head(geo_send_country_df_dl,3)
+```
 
+Data frame with all countries and cities geocoded (first 50 records)
+```{r}
 ###========JOIN DATA TO MASTER DATA FRAME
 lowy_data_geo <- lowy_data_iso
 
@@ -386,8 +411,6 @@ lowy_data_geo <- lowy_data_geo %>% rename(
   send_lon =lon,
   send_lat = lat)
 
-head(lowy_data_geo)
-
 #Join post city lon/lat
 lowy_data_geo <- merge(lowy_data_geo,geo_city_country_df_dl, by = "post_city_country")
 
@@ -395,7 +418,7 @@ lowy_data_geo <- lowy_data_geo %>% rename(
   post_city_lon =lon,
   post_city_lat = lat)
 
-head(lowy_data_geo,3)
+head(lowy_data_geo,50)
 ```
 
 **Part 2 exact embassy locations**<br>
@@ -426,31 +449,43 @@ if(use_local_files) {
   exact_post_lat = lat)
   
   #Save .csv file
-  write.csv(lowy_data_geo_master,"./Data/GoogleAPI/lowy_data_geo_master.csv", row.names = FALSE)
+  write.csv(geo_send_country_df_dl,"./Data/GoogleAPI/lowy_data_geo_master.csv", row.names = FALSE)
 }
+```
 
+First 50 records of all geocoded diplomatic outposts
+```{r}
+head(lowy_data_geo_master,50)
+```
+
+```{r include=FALSE}
 #Unload unnecessary data from global environment
 rm(list = ls()) #purge all else (comment/uncomment as needed)
-
 ```
 
 ***
 
-|| [0.0|READ ME](#h_0.0_readme) || [1.0|EXTRACT](#h_1.0_extract) || [2.0|TRANSFORM](#h_2.0_transform) || [**3.0|LOAD and ANALYSE**](#h_3.0_analyse) || <br>
+|| [0.0|READ ME](#h_0.0_readme) || [1.0|EXTRACT](#h_1.0_extract) || [2.0|TRANSFORM](#h_2.0_transform) || [**3.0|LOAD and ANALYSE**](#h_3.0_analyse) || [4.0|ACLED data](#h_4.0_acled) || [5.0|ACLED data](#h_5.0_cases) ||<br>
 
 ### 3.0 Load and analyse Lowy Institute data {#h_3.0_analyse}
-> **Purpose of section**: visualise coordinates; and run clustering analysis<br>
-> **Inputs**: `lowy_data_geo_master` (final output of part 2)<br>
-> **Outputs**: maps and visuals
+> **Purpose of section** | visualise coordinates; and run clustering analysis<br>
+> **Inputs** | `lowy_data_geo_master` (final output of part 2)<br>
+> **Outputs** | maps and visuals
 
 ***
 
 #### 3.1 Load data and segmet usable part for analysis {#h_3.1_analysis_prep}
-[Back to index](#h_0.2_index)
-```{r echo = TRUE, results = 'hide'}
+[Back to index](#h_0.2_index)<br>
+
+Load data
+```{r results='hide'}
 ###Load data from section 2
 lowy_data_complete <- read_csv("./Data/GoogleAPI/lowy_data_geo_master.csv")
+```
+<br>
 
+Segmentation code
+```{r}
 ###Filter out unusable datapoints
 #names(lowy_data_complete)
 
@@ -475,7 +510,6 @@ lowy_data_complete = select(lowy_data_complete,
                             everything())
 
 lowy_data_complete <- lowy_data_complete[order(lowy_data_complete$send_country),]
-#head(lowy_data_complete)
 
 #Filter out NA values (around 44 values)
 geo_lowy_NA_values <- lowy_data_complete %>%
@@ -486,7 +520,8 @@ geo_lowy_no_NA <- lowy_data_complete %>%
   dplyr::select(everything()) %>%
   dplyr::filter(!is.na(exact_post_lon))
 ```
-
+<br>
+Summarise change to master GDI dataframe
 ```{r}
 #Preview table
 report_full_length <-length(lowy_data_complete$send_country)
@@ -494,14 +529,21 @@ report_na_length <- length(geo_lowy_NA_values$send_country)
 report_non_na_length <- length(geo_lowy_no_NA$send_country)
 
 cat("There are,", report_full_length,"entries in the complete data frame.","\nFrom these,",report_na_length,"are NA/blank. (",report_na_length/report_full_length*100,"% )","\nIn total,",report_non_na_length,"entries have valid coordinates.","\nTotal coverage is:",report_non_na_length/report_full_length*100,"%")
+```
+<br>
+all points visualised
+```{r}
+geo_lowy_no_NA_vis <-
+    st_as_sf(geo_lowy_no_NA,coords=c("exact_post_lon","exact_post_lat"),crs = 4326,remove = FALSE)
+
+mapview(geo_lowy_no_NA_vis)
 
 ```
 
-
 #### 3.2 Geo-coding analysis function {#h_3.2_geo_function}
-[Back to index](#h_0.2_index)
-Function to take in data frame, and a filter to visualise and return filtered dataframe for further analysis `f_exact_city_postings <- function(p_city_filter,p_df){}` see code [here](#ref_code) for further details
-```{r include=FALSE}
+[Back to index](#h_0.2_index)<br>
+Function to take in data frame, and a filter to visualise and return filtered dataframe for further analysis `f_exact_city_postings <- function(p_city_filter,p_df)` expand to see function 
+```{r}
 ###FUNCTION
 f_exact_city_postings <- function(p_city_filter,p_df,p_colour = "red"){
   
@@ -516,7 +558,7 @@ f_exact_city_postings <- function(p_city_filter,p_df,p_colour = "red"){
     st_as_sf(sub_city_df,coords=c("exact_post_lon","exact_post_lat"),crs = 4326,remove = FALSE)
 
   #map view options
-  #mapviewOptions(leafletWidth = 750,leafletHeight = 400)
+  mapviewOptions(leafletWidth = 750,leafletHeight = 400)
   
   #City lat longs
   exact_map <- mapview(
@@ -535,7 +577,7 @@ f_exact_city_postings <- function(p_city_filter,p_df,p_colour = "red"){
       #spatial object
       sub_city_geo_sf,
       legend = FALSE,
-      layer.name = "Exact embassy locations",
+      layer.name = "Diplomatic post locations",
       label = sub_city_df$full_geo_query,
       color = "black",
       alpha= 1,
@@ -546,32 +588,27 @@ f_exact_city_postings <- function(p_city_filter,p_df,p_colour = "red"){
       popup = leafpop::popupTable(subset(sub_city_sf, select = c(send_country_iso,send_country,post_type,post_title,exact_post_lon,exact_post_lat)))
       )
   
-  mapshot(exact_map, url = paste("/cloud/project/R_Notebook/Final/Data/MapFiles/",p_city_filter,"map.html",sep="_"))
+  mapshot(exact_map, url = paste("/cloud/project/Data/MapFiles/",p_city_filter,"map.html",sep="_"))
 
   #return dl table,map
   return_list <- list(df = sub_city_df,map = exact_map)
   return(return_list)
 }
-
-getwd()
 ```
 
 #### 3.3 Visualise {#h_3.3_geo_vis}
-[Back to index](#h_0.2_index)
-Run function on array of cities of interest
+[Back to index](#h_0.2_index)<br>
 
+Run function on array of a city of interest - Tehran
 ```{r}
 ###run function
 f_out <- f_exact_city_postings(p_city_filter = "Tehran",p_df = geo_lowy_no_NA)
 f_out$map
-
 ```
 
 #### 3.4 Clustering {#h_3.4_cluster}
-Use function output from 3.3 to run DBSCAN spatial clustering analysis
-
+Use function output from 3.2 to run DBSCAN spatial clustering analysis
 ```{r}
-
 #============== function start
 f_exact_city_cluster <- function(p_city_filter,p_df,p_eps,p_k = 4,p_outlier_remove = FALSE){
   
@@ -655,56 +692,48 @@ f_exact_city_cluster <- function(p_city_filter,p_df,p_eps,p_k = 4,p_outlier_remo
   
   f_out_cluster$df #[RETURN]
   
-   mapshot(f_out_cluster_map, url = paste("/cloud/project/R_Notebook/Final/Data/MapFiles/",p_city_filter,"cluster_map.html",sep="_"))
+   #mapshot(f_out_cluster_map, url = paste("/cloud/project/R_Notebook/Final/Data/MapFiles/",p_city_filter,"cluster_map.html",sep="_"))
 
   #return list of relevant elements
   return_list <- list(df_sub = f_out$df,map = f_out$map,box_plot = db_coordinates_box, k_plot = db_kNN_plot,f_cluster_map = f_out_cluster_map, f_cluster_df = f_out_cluster$df)
   
     return(return_list)
-  
 }
 #============== function end
-#f_exact_city_cluster(p_city_filter = "Tehran",p_df = geo_lowy_no_NA,p_eps = 0.015,p_k =4,p_outlier_remove = TRUE)
-#f_exact_city_cluster(p_city_filter = "London",p_df = geo_lowy_no_NA,p_eps = 0.005,p_k =4,p_outlier_remove = TRUE)
-
-#f_exact_city_cluster(p_city_filter = "Manila",p_df = geo_lowy_no_NA,p_eps = 0.003,p_k =4,p_outlier_remove = TRUE)
-#f_exact_city_cluster(p_city_filter = "Nairobi",p_df = geo_lowy_no_NA,p_eps = 0.010,p_k =4,p_outlier_remove = TRUE)
-#f_exact_city_cluster(p_city_filter = "Singapore",p_df = geo_lowy_no_NA,p_eps = 0.005,p_k =4,p_outlier_remove = TRUE)
-
-sample_anlaysis <- f_exact_city_cluster(p_city_filter = "Algiers",p_df = geo_lowy_no_NA,p_eps = 0.002,p_k =4,p_outlier_remove = TRUE)
-sample_anlaysis$df_sub
 ```
 
+Run function
+```{r}
+sample_anlaysis <- f_exact_city_cluster(p_city_filter = "Tehran",p_df = geo_lowy_no_NA,p_eps = 0.015,p_k =4,p_outlier_remove = TRUE)
+sample_anlaysis$f_cluster_map
+```
 
 
 ***
 
-|| [0.0|READ ME](#h_0.0_readme) || [1.0|EXTRACT](#h_1.0_extract) || [2.0|TRANSFORM](#h_2.0_transform) || [**3.0|LOAD and ANALYSE**](#h_3.0_analyse) || [**4.0|ACLED data]() || <br>
+|| [0.0|READ ME](#h_0.0_readme) || [1.0|EXTRACT](#h_1.0_extract) || [2.0|TRANSFORM](#h_2.0_transform) || [3.0|LOAD and ANALYSE](#h_3.0_analyse) || [**4.0|ACLED data**](#h_4.0_acled) || [5.0|ACLED cases](#h_5.0_cases) ||<br>
 
 ### 4.0 ACLED data {#h_4.0_acled}
-> **Purpose of section**: add data layer to output from function in 3.4 <br>
-> **Inputs**: `f_exact_city_cluster()` (outputs of function call in 3.4)<br>
-> **Outputs**: maps and visuals
+> **Purpose of section** | add data layer to output from function in 3.4 <br>
+> **Inputs** | `f_exact_city_cluster()` (outputs of function call in 3.4)<br>
+> **Outputs** | maps and visuals
 
 ***
 
 #### 4.1 Set up ACLED API {#h_4.1_acled_api}
 [Back to index](#h_0.2_index)
 
-For details on how to use ACLED API please see documentation [here](){target="_blank"}
+For details on how to use ACLED API please see documentation [here](https://www.acleddata.com/wp-content/uploads/2013/12/API-User-Guide-August-2017.pdf){target="_blank"}
 
 API structure for JSON output
 Full url call: `https://api.acleddata.com/acled/read?terms=accept&country=Iran&year=2019&admin1=Tehran`
 URL base: `https://api.acleddata.com/acled/read?terms=accept` terms=accept is required for output to be provided
 
-after this, filters and criteria can be concatenated useing `&`
-
+after this, filters and criteria can be concatenated using `&`<br>
 In this case, country iso `&iso=364`, year `&year=2019`, admin1 `admin1=Tehran` for city
 
+Define general purpose function
 ```{r}
-#Set analysis parameters
-
-
 #define function, parameters same as those for clustering function in 3.4
 f_acled_merge <- function(p_city_filter,p_df,p_eps,p_k,p_outlier_remove = TRUE,p_acled_year = FALSE,p_acled_city = TRUE){
   
@@ -718,8 +747,6 @@ f_acled_merge <- function(p_city_filter,p_df,p_eps,p_k,p_outlier_remove = TRUE,p
 
   ###ISO
   distinct_country_iso <- distinct(f_exact_output$f_cluster_df,post_country_iso_num)
-  #Kenya #364 IRAN
-  #distinct_country_iso <- 368 
   distinct_country_iso_call <- paste("&iso=",distinct_country_iso,sep="")
   ###YEAR
   if(p_acled_year){
@@ -762,38 +789,48 @@ f_acled_merge <- function(p_city_filter,p_df,p_eps,p_k,p_outlier_remove = TRUE,p
       popup = leafpop::popupTable(subset(acled_df_sf, select = c(event_date,event_type,sub_event_type,fatalities,source_scale,source)))
       )
     
-  mapshot(f_acled_map, url = paste("/cloud/project/R_Notebook/Final/Data/MapFiles/",p_city_filter,"ACLED_map.html",sep="_"))
+  mapshot(f_acled_map, url = paste("/cloud/project/Data/MapFiles/",p_city_filter,"ACLED_map.html",sep="_"))
   
   #return list of relevant elements
   return_list <- list(f_data = f_exact_output$f_cluster_df,
                       f_map = f_acled_map,
                       f_k_plot = f_exact_output$k_plot,
-                      f_acled_data = acled_df_sf)
+                      f_acled_data = acled_df_sf,
+                      f_boxplot = f_exact_output$box_plot)
   
     return(return_list)
 }
-
 ```
+<br>
 
-
-```{r echo= TRUE, results= "hide"}
-
+Run function and see completed function results
+```{r echo = FALSE, results = 'hide'}
 f_acled_results <- f_acled_merge(
   #standard parameters
-  p_city_filter = "Manila",p_df = geo_lowy_no_NA,p_eps = 0.015,p_k =4,p_outlier_remove = TRUE,
+  p_city_filter = "Tehran",p_df = geo_lowy_no_NA,p_eps = 0.015,p_k =4,p_outlier_remove = TRUE,
   #acled parameters
   p_acled_year = 2019,
-  p_acled_city = FALSE)
-
+  p_acled_city = TRUE)
 f_acled_results$f_map
 ```
 
-### 5.0 Test different cities {#h_4.2_analysis}
-[Back to index](#h_0.2_index)
 
-In this section, different cities are examined for qualitative assessment in the final assessment.
-#### 5.1 CAIRO
-```{r}
+***
+
+|| [0.0|READ ME](#h_0.0_readme) || [1.0|EXTRACT](#h_1.0_extract) || [2.0|TRANSFORM](#h_2.0_transform) || [3.0|LOAD and ANALYSE](#h_3.0_analyse) || [4.0|ACLED data](#h_4.0_acled) || [**5.0|ACLED cases**](#h_5.0_cases) ||<br>
+
+### 5.0 ACLED cases {#h_5.0_cases}
+> **Purpose of section**: run two case studies using function from section 4 <br>
+> **Inputs**: `f_acled_merge()` <br>
+> **Outputs**: maps and plots to assess clustering
+
+***
+In this section, different cities are examined for qualitative assessment in the final assessment. Deselect outlier layer and city layer and focus in on ‘exact embassy locations’ layer.<br>
+
+#### 5.1 | Case 1 Cairo {#h_5.1_case}
+[Back to index](#h_0.2_index)<br>
+
+```{r echo = FALSE, results = 'hide'}
 ###CAIRO
 
 cairo_results <- f_acled_merge(
@@ -804,11 +841,11 @@ cairo_results <- f_acled_merge(
   p_acled_city = TRUE)
 
 cairo_results$f_map
-
 ```
 
-#### 5.2 ANKARA
-```{r}
+#### 5.2 | Case 2 Ankara {#h_5.2_case}
+[Back to index](#h_0.2_index)
+```{r echo = FALSE, results = 'hide'}
 ###ANKARA
 
 ankara_results <- f_acled_merge(
@@ -819,66 +856,19 @@ ankara_results <- f_acled_merge(
   p_acled_city = TRUE)
 
 ankara_results$f_map
-
 ```
-
-
 
 ***
 
 #### REFERENCE CODE FUNCTIONS {#ref_code}
 [Back to index](#h_0.2_index)
 
-**`f_exact_city_postings()`**: 
-
-```
-###FUNCTION REFERENCE FOR CODE
-###FUNCTION
-f_exact_city_postings <- function(p_city_filter,p_df){
-  
-  ###Subset of dataframe for chosen country
-  sub_city_df <- p_df[p_df$post_city == p_city_filter,]
-
-  #create spatial objects
-  sub_city_sf <- 
-    st_as_sf(sub_city_df,coords=c("post_city_lon","post_city_lat"),crs = 4326)
-
-  sub_city_geo_sf <-
-    st_as_sf(sub_city_df,coords=c("exact_post_lon","exact_post_lat"),crs = 4326)
-
-  #City lat longs
-  exact_map <- mapview(
-      #spatial object
-      sub_city_sf,
-      legend = FALSE,
-      layer.name = "City coordinates",
-      alpha.regions = 0.4,
-      label = sub_city_sf$post_city_country,
-      cex = 10
-      
-      #Exact lat longs
-      )+ mapview(
-      #spatial object
-      sub_city_geo_sf,
-      legend = FALSE,
-      layer.name = "Geocoded exact coordinates",
-      label = sub_city_geo_sf$full_geo_query,
-      color = "red",
-      alpha.regions = 0.4,
-      col.regions = "red",
-      cex = 0.1)
-  
-  mapshot(exact_map, url = paste("/cloud/project/Data/MapFiles/",p_city_filter,"map.html",sep="_"))
-
-  #return dl table,map
-  return_list <- list(df = sub_city_df,map = exact_map)
-  return(return_list)
-}
-```
 Calculate global population and global economy proportions for this dataset.
-```{r}
+```{r include=FALSE}
 lowy_meta_df <- read_csv("./Data/Processing/Part_1_Out_Lowy_Meta.csv")
+```
 
+```{r}
 #ECONOMY
 economy_summary <- distinct(lowy_meta_df,send_country,meta_gdp_usd_billions)
 economy_summary_sum <- sum(economy_summary$meta_gdp_usd_billions)
@@ -903,7 +893,7 @@ cat("Coverage of the world economy is:",economy_coverage*100,"%","\nCoverage of 
 
 
 
-```{r echo=FALSE}
+```{r echo=FALSE, include=FALSE}
 print("Succesfully ran all code, yay :)")
 ```
 
